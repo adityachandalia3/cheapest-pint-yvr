@@ -42,12 +42,13 @@ export default function PintMapClient({ initialBars }: { initialBars: Bar[] }) {
     return () => clearInterval(refresh);
   }, []);
 
-  // Globally cheapest bar across all categories — drives the hero
-  const cheapestBar = useMemo(() => {
+  // Top 3 cheapest bars across all categories — drives the hero carousel
+  const topThreeBars = useMemo(() => {
     return bars
       .map(b => enrichBarWithActivePrice(b, now))
       .filter(b => b.activePrice !== Infinity)
-      .sort((a, b) => a.activePrice - b.activePrice)[0] ?? null;
+      .sort((a, b) => a.activePrice - b.activePrice)
+      .slice(0, 3);
   }, [bars, now]);
 
   // Bars filtered and sorted for the current beer type selection
@@ -85,7 +86,7 @@ export default function PintMapClient({ initialBars }: { initialBars: Bar[] }) {
         <span className="ml-auto text-xs text-gray-600 font-medium">Vancouver, BC</span>
       </header>
 
-      <HeroSection cheapestBar={cheapestBar} />
+      <HeroSection topBars={topThreeBars} />
 
       <div className="sticky top-0 z-50">
         <FilterBar
@@ -98,7 +99,7 @@ export default function PintMapClient({ initialBars }: { initialBars: Bar[] }) {
       <div ref={mapRef}>
         <MapSection
           bars={filteredBars}
-          cheapestBarId={filteredBars[0]?.id ?? null}
+          cheapestBarId={topThreeBars[0]?.id ?? null}
           highlightedBarId={highlightedBarId}
           onBarSelect={setHighlightedBarId}
         />
