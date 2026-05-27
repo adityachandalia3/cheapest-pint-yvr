@@ -55,6 +55,9 @@ PRICE_CATEGORIES = ("cheapest_beer", "cheapest_lager", "cheapest_ipa")
 MAX_IMAGE_BYTES = 4 * 1024 * 1024   # 4 MB — Claude's per-image limit
 MAX_PDF_BYTES   = 5 * 1024 * 1024   # 5 MB — conservative cap; base64 inflates ~33% so this keeps total request well under Claude's limit
 
+MIN_PINT_PRICE_CAD = 2.00   # below this is almost certainly a misread
+MAX_PINT_PRICE_CAD = 30.00  # above this is almost certainly a misread
+
 # ---------------------------------------------------------------------------
 # Claude prompts
 # ---------------------------------------------------------------------------
@@ -68,12 +71,8 @@ Source URL: {source_url}
 Website text:
 {text}
 
-IMPORTANT — the text may be split into two sections by a line that reads:
+The text may be split into two sections by a line that reads:
   --- HAPPY HOUR / SPECIALS PAGE ---
-
-Rules:
-- `price_cad` must come from the MAIN MENU section (before that marker). Never use a happy-hour price as the regular price.
-- `happy_hour_price_cad` comes from the HAPPY HOUR section (after that marker), if present.
 
 PRICE FORMATS — menus present prices in many ways, recognise all of them:
   - Plain:        "Lager  $7.50"  or  "Lager  7.50"  or  "Lager  7"
@@ -85,28 +84,50 @@ PRICE FORMATS — menus present prices in many ways, recognise all of them:
   - No $ sign:    bare numbers like "8.50" next to a beer name are prices in CAD
 
 IMPORTANT — always pick the CHEAPEST available price for each beer, regardless of pour size.
-If that price is for a 10oz glass, use it. Record the size in pour_size_oz so users know what they get.
+If that price is for a 10oz glass, use it. Record the size in pour_size_oz.
 If no size is specified, set pour_size_oz to null.
-Do NOT assume a beer costs $7 just because most beers do — scan EVERY entry and pick the true minimum.
+Do NOT assume a beer costs $7 just because most beers do — scan EVERY entry.
 
 Find:
 1. The cheapest beer (any style) — lowest price from the main menu, any size
 2. The cheapest lager — scan ALL pilsners, lagers, rice lagers
 3. The cheapest IPA — scan ALL IPAs and hazy IPAs
-4. Happy hour prices and times — use ONLY the happy hour section
+4. All happy hour windows and their day/time ranges
 
 Prefer draft prices over bottles or cans where both appear.
 
+CRITICAL RULES — regular vs happy hour pricing:
+- `price_cad` is ALWAYS the regular price paid outside of happy hour.
+  Take it from the MAIN MENU section (before the --- HAPPY HOUR / SPECIALS PAGE --- marker).
+- `happy_hour_price_cad` is the DISCOUNTED price during happy hour ONLY.
+  Take it from the happy hour section (after the marker), if one exists.
+- `happy_hour_price_cad` MUST be strictly less than `price_cad`. If it is not, set it to null.
+- If the page only shows happy hour / specials prices and has no regular menu prices,
+  set `price_cad` to those prices and set `happy_hour_price_cad` to null.
+- If you cannot clearly tell whether a price is regular or happy-hour, set `happy_hour_price_cad` to null.
+
+HAPPY HOUR WINDOWS — bars may have multiple windows with different day/time combinations:
+- Output every distinct window you find.
+- Use day abbreviations: "mon" "tue" "wed" "thu" "fri" "sat" "sun".
+- If end time is "close", "closing", or "midnight", use "23:59".
+- If a single window applies all week, use all seven day abbreviations.
+
+FOR EACH PRICE, also output:
+- "confidence": "high" if the price is clearly stated, "medium" if inferred, "low" if uncertain
+- "source_section": "main_menu" | "happy_hour" | "specials" | "unknown"
+
 Respond with ONLY a JSON object — no explanation, no markdown fences:
 {{
-  "cheapest_beer":   {{"name": "Beer Name",  "price_cad": 5.50, "pour_size_oz": 10, "happy_hour_price_cad": null}},
-  "cheapest_lager":  {{"name": "Lager Name", "price_cad": 5.50, "pour_size_oz": 10, "happy_hour_price_cad": null}},
-  "cheapest_ipa":    {{"name": "IPA Name",   "price_cad": 6.75, "pour_size_oz": 10, "happy_hour_price_cad": null}},
-  "happy_hour_start": "16:00",
-  "happy_hour_end":   "18:00"
+  "cheapest_beer":  {{"name": "Beer Name",  "price_cad": 5.50, "pour_size_oz": 16, "happy_hour_price_cad": 4.50, "confidence": "high", "source_section": "main_menu"}},
+  "cheapest_lager": {{"name": "Lager Name", "price_cad": 6.00, "pour_size_oz": 16, "happy_hour_price_cad": null, "confidence": "high", "source_section": "main_menu"}},
+  "cheapest_ipa":   {{"name": "IPA Name",   "price_cad": 7.00, "pour_size_oz": null, "happy_hour_price_cad": null, "confidence": "medium", "source_section": "main_menu"}},
+  "happy_hour_windows": [
+    {{"days": ["mon","tue","wed","thu","fri"], "start": "15:00", "end": "18:00", "notes": null}},
+    {{"days": ["sat","sun"], "start": "14:00", "end": "17:00", "notes": null}}
+  ]
 }}
 
-Set any value to null if it cannot be found. Use 24-hour HH:MM for times.
+Set any value to null if it cannot be found.
 """
 
 IMAGE_EXTRACT_PROMPT = """\
@@ -118,22 +139,35 @@ From this image, extract:
 1. The cheapest beer (any style) and its price in CAD
 2. The cheapest lager and its price in CAD
 3. The cheapest IPA and its price in CAD
-4. Any happy hour prices and the time window
+4. All happy hour windows (day ranges + times)
 
 Prefer draft/pint prices over bottles or cans.
-
 Always pick the CHEAPEST available price regardless of pour size, and record the size.
+
+CRITICAL RULES — regular vs happy hour pricing:
+- `price_cad` is ALWAYS the regular price outside of happy hour.
+- `happy_hour_price_cad` MUST be strictly less than `price_cad`. If not, set it to null.
+- If the image only shows happy hour prices, use those as `price_cad` and set `happy_hour_price_cad` to null.
+
+HAPPY HOUR WINDOWS — output every distinct window you find:
+- Day abbreviations: "mon" "tue" "wed" "thu" "fri" "sat" "sun"
+- "close" / "midnight" end times → use "23:59"
+
+FOR EACH PRICE, also output:
+- "confidence": "high" | "medium" | "low"
+- "source_section": "main_menu" | "happy_hour" | "specials" | "unknown"
 
 Respond with ONLY a JSON object — no explanation, no markdown fences:
 {{
-  "cheapest_beer":   {{"name": "Beer Name",  "price_cad": 5.50, "pour_size_oz": 10, "happy_hour_price_cad": null}},
-  "cheapest_lager":  {{"name": "Lager Name", "price_cad": 5.50, "pour_size_oz": 10, "happy_hour_price_cad": null}},
-  "cheapest_ipa":    {{"name": "IPA Name",   "price_cad": 6.75, "pour_size_oz": null, "happy_hour_price_cad": null}},
-  "happy_hour_start": "16:00",
-  "happy_hour_end":   "18:00"
+  "cheapest_beer":  {{"name": "Beer Name",  "price_cad": 5.50, "pour_size_oz": 16, "happy_hour_price_cad": null, "confidence": "high", "source_section": "main_menu"}},
+  "cheapest_lager": {{"name": "Lager Name", "price_cad": 6.00, "pour_size_oz": 16, "happy_hour_price_cad": null, "confidence": "high", "source_section": "main_menu"}},
+  "cheapest_ipa":   {{"name": "IPA Name",   "price_cad": 7.00, "pour_size_oz": null, "happy_hour_price_cad": null, "confidence": "medium", "source_section": "main_menu"}},
+  "happy_hour_windows": [
+    {{"days": ["mon","tue","wed","thu","fri"], "start": "15:00", "end": "18:00", "notes": null}}
+  ]
 }}
 
-Set any value to null if not found. Use 24-hour HH:MM for times.
+Set any value to null if not found.
 """
 
 # ---------------------------------------------------------------------------
@@ -290,6 +324,26 @@ def upsert_prices(supabase: Client, bar_id: str, price_records: list[dict]) -> N
     supabase.table("pint_prices").upsert(
         price_records, on_conflict="bar_id,category"
     ).execute()
+
+
+def upsert_happy_hour_windows(supabase: Client, bar_id: str, windows: list[dict]) -> None:
+    """Replace all happy hour windows for a bar with a fresh set."""
+    if not windows:
+        return
+    supabase.table("happy_hour_windows").delete().eq("bar_id", bar_id).execute()
+    records = [
+        {
+            "bar_id": bar_id,
+            "days": w["days"],
+            "start_time": w["start"],
+            "end_time": w["end"],
+            "notes": w.get("notes"),
+        }
+        for w in windows
+        if w.get("days") and w.get("start") and w.get("end")
+    ]
+    if records:
+        supabase.table("happy_hour_windows").insert(records).execute()
 
 
 def update_bar_fields(supabase: Client, bar_id: str, fields: dict) -> None:
@@ -558,10 +612,10 @@ def extract_prices_from_pdf(
     bar_name: str,
     pdf_b64: str,
     source_url: str,
-) -> tuple[list[dict], str | None, str | None]:
+) -> ExtractionResult:
     msg = claude.messages.create(
         model="claude-haiku-4-5-20251001",
-        max_tokens=512,
+        max_tokens=768,
         messages=[{"role": "user", "content": [
             {"type": "document", "source": {
                 "type": "base64",
@@ -571,7 +625,7 @@ def extract_prices_from_pdf(
             {"type": "text", "text": IMAGE_EXTRACT_PROMPT.format(bar_name=bar_name)},
         ]}],
     )
-    return _build_price_records(_parse_claude_json(msg.content[0].text), source_url)
+    return _build_price_records(_parse_claude_json(msg.content[0].text), source_url, bar_name)
 
 
 # ===========================================================================
@@ -784,25 +838,175 @@ def _parse_claude_json(raw: str) -> dict:
     return json.loads(raw)
 
 
-def _build_price_records(data: dict, source_url: str) -> tuple[list[dict], str | None, str | None]:
-    """Convert a Claude response dict into (price_records, hh_start, hh_end)."""
+# ---------------------------------------------------------------------------
+# Happy hour window helpers
+# ---------------------------------------------------------------------------
+
+_CLOSE_ALIASES = {"close", "closing", "midnight", "last call", "2:00", "2:00am", "2am"}
+
+_DAY_MAP = {
+    "mon": "mon", "monday": "mon",
+    "tue": "tue", "tuesday": "tue",
+    "wed": "wed", "wednesday": "wed",
+    "thu": "thu", "thursday": "thu",
+    "fri": "fri", "friday": "fri",
+    "sat": "sat", "saturday": "sat",
+    "sun": "sun", "sunday": "sun",
+}
+ALL_DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+
+
+def _normalise_hh_windows(raw_windows) -> list[dict]:
+    """Parse and normalise happy_hour_windows from a Claude response."""
+    if not isinstance(raw_windows, list):
+        return []
+    result = []
+    for w in raw_windows:
+        if not isinstance(w, dict):
+            continue
+        days_raw = w.get("days") or ALL_DAYS
+        if not isinstance(days_raw, list):
+            continue
+        days = [_DAY_MAP.get(str(d).lower().strip()) for d in days_raw]
+        days = sorted({d for d in days if d}, key=ALL_DAYS.index)
+        if not days:
+            days = ALL_DAYS[:]
+
+        start = str(w.get("start") or w.get("start_time") or "").strip()
+        end   = str(w.get("end")   or w.get("end_time")   or "").strip()
+        if not start or not end:
+            continue
+        if end.lower() in _CLOSE_ALIASES:
+            end = "23:59"
+        if not re.match(r'^\d{1,2}:\d{2}$', start):
+            continue
+        if not re.match(r'^\d{1,2}:\d{2}$', end):
+            continue
+
+        result.append({
+            "days": days,
+            "start": start,
+            "end": end,
+            "notes": w.get("notes"),
+        })
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Price validation
+# ---------------------------------------------------------------------------
+
+def _validate_price_records(
+    records: list[dict],
+    hh_windows: list[dict],
+    bar_name: str = "",
+) -> tuple[list[dict], list[dict], bool]:
+    """
+    Validate and clean extracted price records.
+    Returns (cleaned_records, cleaned_windows, needs_reverification).
+
+    Rules enforced:
+    - price_cad must be in [MIN_PINT_PRICE_CAD, MAX_PINT_PRICE_CAD]
+    - happy_hour_price_cad must be strictly less than price_cad
+    - happy_hour_price_cad must also pass the range check
+    - HH prices with no HH windows → strip the HH prices (we have no idea when they apply)
+    """
+    needs_reverification = False
+    cleaned = []
+    any_hh_price = False
+
+    for r in records:
+        price    = r["price_cad"]
+        hh_price = r.get("happy_hour_price_cad")
+        category = r["category"]
+
+        if not (MIN_PINT_PRICE_CAD <= price <= MAX_PINT_PRICE_CAD):
+            print(f"    ⚠  {category}: regular price ${price:.2f} outside "
+                  f"[${MIN_PINT_PRICE_CAD:.0f}–${MAX_PINT_PRICE_CAD:.0f}] — dropped")
+            needs_reverification = True
+            continue
+
+        if hh_price is not None:
+            if hh_price >= price:
+                print(f"    ⚠  {category}: HH price ${hh_price:.2f} ≥ regular "
+                      f"${price:.2f} — discarding HH price")
+                r = {**r, "happy_hour_price_cad": None}
+                needs_reverification = True
+            elif not (MIN_PINT_PRICE_CAD <= hh_price <= MAX_PINT_PRICE_CAD):
+                print(f"    ⚠  {category}: HH price ${hh_price:.2f} outside "
+                      f"[${MIN_PINT_PRICE_CAD:.0f}–${MAX_PINT_PRICE_CAD:.0f}] — discarding HH price")
+                r = {**r, "happy_hour_price_cad": None}
+                needs_reverification = True
+            else:
+                any_hh_price = True
+
+        cleaned.append(r)
+
+    # HH prices without any time windows are useless — we can't show the right price
+    if any_hh_price and not hh_windows:
+        print(f"    ⚠  HH prices found but no time windows — stripping HH prices")
+        cleaned = [{**r, "happy_hour_price_cad": None} for r in cleaned]
+        needs_reverification = True
+
+    return cleaned, hh_windows, needs_reverification
+
+
+def _build_price_records(
+    data: dict,
+    source_url: str,
+    bar_name: str = "",
+) -> tuple[list[dict], list[dict], str | None, str | None, bool]:
+    """
+    Convert a Claude response dict into
+    (price_records, hh_windows, hh_start, hh_end, needs_reverification).
+    hh_start/hh_end are derived from the primary window for backwards compat.
+    """
     records = []
     for category in PRICE_CATEGORIES:
         entry = data.get(category)
         if not entry or entry.get("price_cad") is None:
             continue
-        hh = entry.get("happy_hour_price_cad")
-        sz = entry.get("pour_size_oz")
+        try:
+            price = float(entry["price_cad"])
+        except (TypeError, ValueError):
+            continue
+        hh_raw = entry.get("happy_hour_price_cad")
+        sz     = entry.get("pour_size_oz")
         records.append({
-            "category": category,
-            "beer_name": entry.get("name"),
-            "price_cad": float(entry["price_cad"]),
-            "pour_size_oz": float(sz) if sz is not None else None,
-            "happy_hour_price_cad": float(hh) if hh is not None else None,
-            "source_url": source_url,
-            "verified": False,
+            "category":             category,
+            "beer_name":            entry.get("name"),
+            "price_cad":            price,
+            "pour_size_oz":         float(sz) if sz is not None else None,
+            "happy_hour_price_cad": float(hh_raw) if hh_raw is not None else None,
+            "confidence":           entry.get("confidence"),
+            "source_section":       entry.get("source_section"),
+            "source_url":           source_url,
+            "verified":             False,
         })
-    return records, data.get("happy_hour_start"), data.get("happy_hour_end")
+
+    # Parse multi-window happy hour (new format)
+    hh_windows = _normalise_hh_windows(data.get("happy_hour_windows", []))
+
+    # Legacy fallback: top-level happy_hour_start / happy_hour_end → single all-week window
+    if not hh_windows:
+        legacy_start = data.get("happy_hour_start")
+        legacy_end   = data.get("happy_hour_end")
+        if legacy_start and legacy_end:
+            end_val = "23:59" if str(legacy_end).lower().strip() in _CLOSE_ALIASES else legacy_end
+            hh_windows = [{"days": ALL_DAYS[:], "start": legacy_start, "end": end_val, "notes": None}]
+
+    records, hh_windows, needs_reverification = _validate_price_records(
+        records, hh_windows, bar_name
+    )
+
+    # Derive primary window for the bars table (backwards compat)
+    hh_start = hh_windows[0]["start"] if hh_windows else None
+    hh_end   = hh_windows[0]["end"]   if hh_windows else None
+
+    return records, hh_windows, hh_start, hh_end, needs_reverification
+
+
+ExtractionResult = tuple[list[dict], list[dict], str | None, str | None, bool]
 
 
 def extract_prices_from_text(
@@ -810,17 +1014,17 @@ def extract_prices_from_text(
     bar_name: str,
     text: str,
     source_url: str,
-) -> tuple[list[dict], str | None, str | None]:
+) -> ExtractionResult:
     msg = claude.messages.create(
         model="claude-haiku-4-5-20251001",
-        max_tokens=512,
+        max_tokens=768,
         messages=[{"role": "user", "content": EXTRACT_PROMPT.format(
             bar_name=bar_name,
             source_url=source_url,
             text=consolidate_menu_text(text),
         )}],
     )
-    return _build_price_records(_parse_claude_json(msg.content[0].text), source_url)
+    return _build_price_records(_parse_claude_json(msg.content[0].text), source_url, bar_name)
 
 
 def extract_prices_from_image(
@@ -829,10 +1033,10 @@ def extract_prices_from_image(
     image_b64: str,
     media_type: str,
     source_url: str,
-) -> tuple[list[dict], str | None, str | None]:
+) -> ExtractionResult:
     msg = claude.messages.create(
         model="claude-haiku-4-5-20251001",
-        max_tokens=512,
+        max_tokens=768,
         messages=[{"role": "user", "content": [
             {"type": "image", "source": {
                 "type": "base64", "media_type": media_type, "data": image_b64,
@@ -840,7 +1044,7 @@ def extract_prices_from_image(
             {"type": "text", "text": IMAGE_EXTRACT_PROMPT.format(bar_name=bar_name)},
         ]}],
     )
-    return _build_price_records(_parse_claude_json(msg.content[0].text), source_url)
+    return _build_price_records(_parse_claude_json(msg.content[0].text), source_url, bar_name)
 
 
 def extract_prices_from_json_responses(
@@ -848,7 +1052,7 @@ def extract_prices_from_json_responses(
     bar_name: str,
     json_texts: list[str],
     source_url: str,
-) -> tuple[list[dict], str | None, str | None]:
+) -> ExtractionResult:
     """Try to extract prices from XHR/fetch JSON responses captured during page load."""
     combined = "\n\n---\n\n".join(json_texts[:5])
     return extract_prices_from_text(claude, bar_name, combined[:10000], source_url)
@@ -1039,8 +1243,12 @@ def main() -> None:
                     via = f" (via {source_url})" if source_url != url else ""
 
                     # ── Try text extraction ───────────────────────────────
-                    records, hh_start, hh_end = [], None, None
-                    skip_reason: str | None = None
+                    records:              list[dict] = []
+                    hh_windows:           list[dict] = []
+                    hh_start:             str | None = None
+                    hh_end:               str | None = None
+                    needs_reverification: bool       = False
+                    skip_reason:          str | None = None
 
                     if _is_pdf_url(source_url):
                         print(f"    PDF menu detected — downloading …")
@@ -1052,30 +1260,25 @@ def main() -> None:
                             if pdf_bytes is None:
                                 skip_reason = "pdf_download_failed"
                             elif len(pdf_bytes) < PDF_SMALL:
-                                # Small PDF (<5 MB) — send as Claude document
                                 pdf_b64 = base64.standard_b64encode(pdf_bytes).decode()
                                 try:
-                                    records, hh_start, hh_end = extract_prices_from_pdf(
-                                        claude, name, pdf_b64, source_url
-                                    )
+                                    records, hh_windows, hh_start, hh_end, needs_reverification = \
+                                        extract_prices_from_pdf(claude, name, pdf_b64, source_url)
                                 except Exception as exc:
                                     skip_reason = f"PDF extraction failed: {exc}"
                             else:
-                                # Medium PDF (5–50 MB) — render pages to images
                                 rendered_pages = render_pdf_pages_as_images(pdf_bytes)
                                 for page_b64, img_media_type in rendered_pages:
                                     try:
-                                        pg_records, pg_hh_start, pg_hh_end = extract_prices_from_image(
+                                        pg_r, pg_w, pg_s, pg_e, pg_rv = extract_prices_from_image(
                                             claude, name, page_b64, img_media_type, source_url
                                         )
-                                        if pg_records:
-                                            records = pg_records
-                                            hh_start, hh_end = pg_hh_start, pg_hh_end
+                                        if pg_r:
+                                            records, hh_windows, hh_start, hh_end = pg_r, pg_w, pg_s, pg_e
+                                            needs_reverification = needs_reverification or pg_rv
                                             break
-                                        if pg_hh_start and not hh_start:
-                                            hh_start = pg_hh_start
-                                        if pg_hh_end and not hh_end:
-                                            hh_end = pg_hh_end
+                                        if pg_w and not hh_windows:
+                                            hh_windows, hh_start, hh_end = pg_w, pg_s, pg_e
                                     except Exception:
                                         continue
                                 if not records and not skip_reason:
@@ -1083,17 +1286,15 @@ def main() -> None:
                     elif len(text) < 100:
                         skip_reason = "Too little content on page"
                     else:
-                        records, hh_start, hh_end = extract_prices_from_text(
-                            claude, name, text, source_url
-                        )
+                        records, hh_windows, hh_start, hh_end, needs_reverification = \
+                            extract_prices_from_text(claude, name, text, source_url)
 
                     # ── Try captured XHR JSON if text gave nothing ────────
                     if not records and not _is_pdf_url(source_url) and not skip_reason and captured_json:
                         print(f"    Text gave no prices — trying {len(captured_json)} captured XHR response(s) …")
                         try:
-                            records, hh_start, hh_end = extract_prices_from_json_responses(
-                                claude, name, captured_json, source_url
-                            )
+                            records, hh_windows, hh_start, hh_end, needs_reverification = \
+                                extract_prices_from_json_responses(claude, name, captured_json, source_url)
                             if records:
                                 via = " (XHR JSON)"
                         except Exception:
@@ -1111,9 +1312,8 @@ def main() -> None:
                             iframe_text = page.inner_text("body")
                             if len(iframe_text) > 100:
                                 try:
-                                    records, hh_start, hh_end = extract_prices_from_text(
-                                        claude, name, iframe_text, iframe_url
-                                    )
+                                    records, hh_windows, hh_start, hh_end, needs_reverification = \
+                                        extract_prices_from_text(claude, name, iframe_text, iframe_url)
                                     if records:
                                         source_url = iframe_url
                                         via = f" (iframe: {iframe_url[:50]})"
@@ -1132,11 +1332,12 @@ def main() -> None:
                                 continue
                             b64, media_type = img_data
                             try:
-                                img_records, img_hh_start, img_hh_end = extract_prices_from_image(
+                                img_r, img_w, img_s, img_e, img_rv = extract_prices_from_image(
                                     claude, name, b64, media_type, img_url
                                 )
-                                if img_records:
-                                    records, hh_start, hh_end = img_records, img_hh_start, img_hh_end
+                                if img_r:
+                                    records, hh_windows, hh_start, hh_end = img_r, img_w, img_s, img_e
+                                    needs_reverification = needs_reverification or img_rv
                                     via = " (menu image)"
                                     used_image = True
                                     break
@@ -1146,12 +1347,17 @@ def main() -> None:
                     menu_type = detect_menu_type(source_url, used_image)
 
                     # ── Persist results ───────────────────────────────────
-                    hh_found = bool(hh_start or hh_end)
+                    hh_found = bool(hh_windows)
 
                     if records:
                         upsert_prices(supabase, bar_id, records)
-                        # price_entry_count is maintained by DB trigger — no manual count needed
-                        bar_updates: dict = {"menu_type": menu_type, "notes": None}
+                        if hh_windows:
+                            upsert_happy_hour_windows(supabase, bar_id, hh_windows)
+                        bar_updates: dict = {
+                            "menu_type": menu_type,
+                            "notes": None,
+                            "needs_reverification": needs_reverification,
+                        }
                         if hh_start: bar_updates["happy_hour_start"] = hh_start
                         if hh_end:   bar_updates["happy_hour_end"]   = hh_end
                         update_bar_fields(supabase, bar_id, bar_updates)
