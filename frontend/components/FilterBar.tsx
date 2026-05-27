@@ -61,6 +61,14 @@ export default function FilterBar({ filters, onFiltersChange, neighbourhoods }: 
           🎉 Happy Hour Only
         </button>
 
+        {/* World Cup Mode */}
+        <div className="relative flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg border border-white/10 text-gray-600 bg-[#1a1a2e] cursor-not-allowed select-none">
+          ⚽ World Cup Mode
+          <span className="text-[10px] font-black uppercase tracking-wide bg-white/10 text-gray-500 px-1.5 py-0.5 rounded-full">
+            Coming Soon
+          </span>
+        </div>
+
         {/* Sort toggle */}
         <button
           onClick={() =>
