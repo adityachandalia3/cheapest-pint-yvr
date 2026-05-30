@@ -8,6 +8,15 @@ export interface PintPrice {
   pour_size_oz: number | null;
 }
 
+export interface HappyHourWindow {
+  id: string;
+  bar_id: string;
+  days: string[];
+  start_time: string;
+  end_time: string;
+  notes: string | null;
+}
+
 export interface Bar {
   id: string;
   google_place_id: string;
@@ -16,16 +25,15 @@ export interface Bar {
   latitude: number | null;
   longitude: number | null;
   neighbourhood: string | null;
-  happy_hour_start: string | null;
-  happy_hour_end: string | null;
-  happy_hour_notes: string | null;
   is_permanently_closed: boolean;
   pint_prices: PintPrice[];
+  happy_hour_windows: HappyHourWindow[];
 }
 
 export interface BarWithActivePrice extends Bar {
   activePrice: number;
   activeBeerName: string | null;
+  activePourSize: number | null;
   isHappyHour: boolean;
 }
 

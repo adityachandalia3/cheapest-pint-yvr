@@ -32,3 +32,19 @@ body {
 .gm-ui-hover-effect {
   opacity: 0.6 !important;
 }
+
+/* Vibe search card slide-up animation */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.vibe-card {
+  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}

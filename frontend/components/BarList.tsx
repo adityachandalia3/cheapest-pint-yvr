@@ -1,6 +1,7 @@
 'use client';
 
 import { BarWithActivePrice, BeerCategory } from '@/lib/types';
+import { formatPourSize } from '@/lib/priceUtils';
 
 interface Props {
   bars: BarWithActivePrice[];
@@ -59,6 +60,9 @@ export default function BarList({ bars, highlightedBarId, onBarClick, beerType }
               <span className="text-3xl font-black text-[#F5A623] tabular-nums">
                 ${bar.activePrice.toFixed(2)}
               </span>
+              {formatPourSize(bar.activePourSize) && (
+                <span className="text-gray-500 text-sm mb-1">{formatPourSize(bar.activePourSize)}</span>
+              )}
               <span className="text-gray-600 text-sm mb-1">{CATEGORY_LABELS[beerType]}</span>
             </div>
 

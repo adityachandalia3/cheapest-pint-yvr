@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { BarWithActivePrice } from '@/lib/types';
+import { formatPourSize } from '@/lib/priceUtils';
 
 const MEDALS = [
   {
@@ -107,7 +108,12 @@ export default function HeroSection({ topBars }: { topBars: BarWithActivePrice[]
         )}
 
         {bar.activeBeerName && (
-          <p className="text-gray-500 text-sm mb-5">{bar.activeBeerName}</p>
+          <p className="text-gray-500 text-sm mb-5">
+            {bar.activeBeerName}
+            {formatPourSize(bar.activePourSize) && (
+              <span className="ml-2 text-gray-600">· {formatPourSize(bar.activePourSize)}</span>
+            )}
+          </p>
         )}
 
         {bar.isHappyHour && (

@@ -23,6 +23,7 @@ import time
 from urllib.parse import urljoin, urlparse
 
 import anthropic
+from typing import Optional
 import fitz  # PyMuPDF
 import requests
 from dotenv import load_dotenv
@@ -347,8 +348,18 @@ def upsert_happy_hour_windows(supabase: Client, bar_id: str, windows: list[dict]
 
 
 def update_bar_fields(supabase: Client, bar_id: str, fields: dict) -> None:
-    if fields:
+    if not fields:
+        return
+    try:
         supabase.table("bars").update(fields).eq("id", bar_id).execute()
+    except Exception as e:
+        # If a column isn't in PostgREST's schema cache yet, retry without it
+        if "PGRST204" in str(e) or "schema cache" in str(e).lower():
+            safe = {k: v for k, v in fields.items() if k != "auto_scraped"}
+            if safe:
+                supabase.table("bars").update(safe).eq("id", bar_id).execute()
+        else:
+            raise
 
 
 def log_scrape(
@@ -612,9 +623,10 @@ def extract_prices_from_pdf(
     bar_name: str,
     pdf_b64: str,
     source_url: str,
+    model: str = "claude-haiku-4-5-20251001",
 ) -> ExtractionResult:
     msg = claude.messages.create(
-        model="claude-haiku-4-5-20251001",
+        model=model,
         max_tokens=768,
         messages=[{"role": "user", "content": [
             {"type": "document", "source": {
@@ -1006,7 +1018,7 @@ def _build_price_records(
     return records, hh_windows, hh_start, hh_end, needs_reverification
 
 
-ExtractionResult = tuple[list[dict], list[dict], str | None, str | None, bool]
+ExtractionResult = tuple  # (price_records, hh_windows, hh_start, hh_end, needs_reverification)
 
 
 def extract_prices_from_text(
@@ -1014,9 +1026,10 @@ def extract_prices_from_text(
     bar_name: str,
     text: str,
     source_url: str,
+    model: str = "claude-haiku-4-5-20251001",
 ) -> ExtractionResult:
     msg = claude.messages.create(
-        model="claude-haiku-4-5-20251001",
+        model=model,
         max_tokens=768,
         messages=[{"role": "user", "content": EXTRACT_PROMPT.format(
             bar_name=bar_name,
@@ -1033,9 +1046,10 @@ def extract_prices_from_image(
     image_b64: str,
     media_type: str,
     source_url: str,
+    model: str = "claude-haiku-4-5-20251001",
 ) -> ExtractionResult:
     msg = claude.messages.create(
-        model="claude-haiku-4-5-20251001",
+        model=model,
         max_tokens=768,
         messages=[{"role": "user", "content": [
             {"type": "image", "source": {
@@ -1052,10 +1066,11 @@ def extract_prices_from_json_responses(
     bar_name: str,
     json_texts: list[str],
     source_url: str,
+    model: str = "claude-haiku-4-5-20251001",
 ) -> ExtractionResult:
     """Try to extract prices from XHR/fetch JSON responses captured during page load."""
     combined = "\n\n---\n\n".join(json_texts[:5])
-    return extract_prices_from_text(claude, bar_name, combined[:10000], source_url)
+    return extract_prices_from_text(claude, bar_name, combined[:10000], source_url, model=model)
 
 
 # ===========================================================================
@@ -1075,6 +1090,12 @@ def main() -> None:
     parser.add_argument("--radius", type=int, default=None, help="Search radius in metres")
     parser.add_argument("--max-bars", type=int, default=None, help="Max new bars to discover")
     parser.add_argument("--area-label", type=str, default=None, help="Label printed in batch summary")
+    parser.add_argument("--bar", type=str, default=None,
+        help="Target a single bar by name (case-insensitive substring match). Skips Phase 1.")
+    parser.add_argument("--dry-run", action="store_true",
+        help="Print what would be written without touching the database")
+    parser.add_argument("--model", type=str, default="claude-haiku-4-5-20251001",
+        help="Claude model to use for price extraction (default: haiku)")
     args = parser.parse_args()
 
     if args.test:
@@ -1099,7 +1120,13 @@ def main() -> None:
     total_added = total_updated = 0
     all_new_place_ids: set[str] = set()
 
-    if args.prices_only or args.js_only:
+    if args.dry_run:
+        print("*** DRY-RUN MODE — nothing will be written to the database ***\n")
+
+    if args.bar:
+        print(f"Single-bar mode: targeting bars whose name contains {args.bar!r}\n")
+
+    if args.prices_only or args.js_only or args.bar:
         print("Skipping discovery — using existing bars in DB.\n")
     else:
         seen_ids: set[str] = set()
@@ -1159,7 +1186,9 @@ def main() -> None:
         .not_.is_("website", "null")
         .eq("is_permanently_closed", False)
     )
-    if args.js_only:
+    if args.bar:
+        query = query.ilike("name", f"%{args.bar}%")
+    elif args.js_only:
         query = query.eq("menu_type", "js_rendered")
     elif args.prices_only:
         query = query.eq("price_entry_count", 0)  # only bars with no prices yet
@@ -1232,7 +1261,8 @@ def main() -> None:
                             pass
                     instagram = find_instagram_url(homepage_html)
                     if instagram:
-                        update_bar_fields(supabase, bar_id, {"instagram_url": instagram})
+                        if not args.dry_run:
+                            update_bar_fields(supabase, bar_id, {"instagram_url": instagram})
                         print(f"    Instagram: {instagram}")
 
                     # ── Navigate to best menu page ────────────────────────
@@ -1263,7 +1293,7 @@ def main() -> None:
                                 pdf_b64 = base64.standard_b64encode(pdf_bytes).decode()
                                 try:
                                     records, hh_windows, hh_start, hh_end, needs_reverification = \
-                                        extract_prices_from_pdf(claude, name, pdf_b64, source_url)
+                                        extract_prices_from_pdf(claude, name, pdf_b64, source_url, model=args.model)
                                 except Exception as exc:
                                     skip_reason = f"PDF extraction failed: {exc}"
                             else:
@@ -1271,7 +1301,7 @@ def main() -> None:
                                 for page_b64, img_media_type in rendered_pages:
                                     try:
                                         pg_r, pg_w, pg_s, pg_e, pg_rv = extract_prices_from_image(
-                                            claude, name, page_b64, img_media_type, source_url
+                                            claude, name, page_b64, img_media_type, source_url, model=args.model
                                         )
                                         if pg_r:
                                             records, hh_windows, hh_start, hh_end = pg_r, pg_w, pg_s, pg_e
@@ -1287,14 +1317,14 @@ def main() -> None:
                         skip_reason = "Too little content on page"
                     else:
                         records, hh_windows, hh_start, hh_end, needs_reverification = \
-                            extract_prices_from_text(claude, name, text, source_url)
+                            extract_prices_from_text(claude, name, text, source_url, model=args.model)
 
                     # ── Try captured XHR JSON if text gave nothing ────────
                     if not records and not _is_pdf_url(source_url) and not skip_reason and captured_json:
                         print(f"    Text gave no prices — trying {len(captured_json)} captured XHR response(s) …")
                         try:
                             records, hh_windows, hh_start, hh_end, needs_reverification = \
-                                extract_prices_from_json_responses(claude, name, captured_json, source_url)
+                                extract_prices_from_json_responses(claude, name, captured_json, source_url, model=args.model)
                             if records:
                                 via = " (XHR JSON)"
                         except Exception:
@@ -1313,7 +1343,7 @@ def main() -> None:
                             if len(iframe_text) > 100:
                                 try:
                                     records, hh_windows, hh_start, hh_end, needs_reverification = \
-                                        extract_prices_from_text(claude, name, iframe_text, iframe_url)
+                                        extract_prices_from_text(claude, name, iframe_text, iframe_url, model=args.model)
                                     if records:
                                         source_url = iframe_url
                                         via = f" (iframe: {iframe_url[:50]})"
@@ -1333,7 +1363,7 @@ def main() -> None:
                             b64, media_type = img_data
                             try:
                                 img_r, img_w, img_s, img_e, img_rv = extract_prices_from_image(
-                                    claude, name, b64, media_type, img_url
+                                    claude, name, b64, media_type, img_url, model=args.model
                                 )
                                 if img_r:
                                     records, hh_windows, hh_start, hh_end = img_r, img_w, img_s, img_e
@@ -1350,30 +1380,43 @@ def main() -> None:
                     hh_found = bool(hh_windows)
 
                     if records:
-                        upsert_prices(supabase, bar_id, records)
-                        if hh_windows:
-                            upsert_happy_hour_windows(supabase, bar_id, hh_windows)
-                        bar_updates: dict = {
-                            "menu_type": menu_type,
-                            "notes": None,
-                            "needs_reverification": needs_reverification,
-                        }
-                        if hh_start: bar_updates["happy_hour_start"] = hh_start
-                        if hh_end:   bar_updates["happy_hour_end"]   = hh_end
-                        update_bar_fields(supabase, bar_id, bar_updates)
-
-                        # Print per-category prices
+                        # Print per-category prices (always shown, dry-run or not)
                         for r in records:
                             hh_str = f"  (HH: ${r['happy_hour_price_cad']:.2f})" if r.get("happy_hour_price_cad") else ""
-                            print(f"    {r['category']}: {r['beer_name'] or '?'}  ${r['price_cad']:.2f}{hh_str}")
+                            conf_str = f"  [{r.get('confidence','?')} / {r.get('source_section','?')}]"
+                            print(f"    {r['category']}: {r['beer_name'] or '?'}  ${r['price_cad']:.2f}{hh_str}{conf_str}")
                         hh_status = f"{hh_start}–{hh_end}" if hh_found else "not found"
                         print(f"    menu_type: {menu_type} | price_entries: {len(records)} | happy_hour: {hh_status}{via}")
+                        if hh_windows:
+                            for w in hh_windows:
+                                days_str = ",".join(w["days"])
+                                print(f"    HH window: [{days_str}] {w['start']}–{w['end']}"
+                                      + (f"  notes: {w['notes']}" if w.get("notes") else ""))
+                        if needs_reverification:
+                            print(f"    needs_reverification: True")
+
+                        if args.dry_run:
+                            print(f"    [DRY-RUN] Would write {len(records)} row(s) to pint_prices"
+                                  + (f" + {len(hh_windows)} row(s) to happy_hour_windows" if hh_windows else ""))
+                        else:
+                            upsert_prices(supabase, bar_id, records)
+                            if hh_windows:
+                                upsert_happy_hour_windows(supabase, bar_id, hh_windows)
+                            bar_updates: dict = {
+                                "menu_type": menu_type,
+                                "notes": None,
+                                "needs_reverification": needs_reverification,
+                                "auto_scraped": True,
+                            }
+                            if hh_start: bar_updates["happy_hour_start"] = hh_start
+                            if hh_end:   bar_updates["happy_hour_end"]   = hh_end
+                            update_bar_fields(supabase, bar_id, bar_updates)
+                            log_scrape(
+                                supabase, bar_id, success=True, menu_found=True,
+                                menu_type=menu_type,
+                                error_message="happy hour not found" if not hh_found else None,
+                            )
                         prices_written += len(records)
-                        log_scrape(
-                            supabase, bar_id, success=True, menu_found=True,
-                            menu_type=menu_type,
-                            error_message="happy hour not found" if not hh_found else None,
-                        )
                     else:
                         if not skip_reason:
                             if iframe_tried:
@@ -1385,16 +1428,18 @@ def main() -> None:
                         print(f"    menu_type: {menu_type} | price_entries: 0 | happy_hour: n/a")
                         print(f"    Skipped — {skip_reason}")
                         prices_skipped += 1
-                        update_bar_fields(supabase, bar_id, {
-                            "menu_type": menu_type,
-                            "notes": "No prices available online",
-                        })
-                        log_scrape(
-                            supabase, bar_id,
-                            success=False, menu_found=False,
-                            menu_type=menu_type,
-                            error_message=skip_reason,
-                        )
+                        if not args.dry_run:
+                            update_bar_fields(supabase, bar_id, {
+                                "menu_type": menu_type,
+                                "notes": "No prices available online",
+                                "auto_scraped": False,
+                            })
+                            log_scrape(
+                                supabase, bar_id,
+                                success=False, menu_found=False,
+                                menu_type=menu_type,
+                                error_message=skip_reason,
+                            )
 
                 finally:
                     ctx.close()
@@ -1403,17 +1448,20 @@ def main() -> None:
                 msg = f"Claude returned non-JSON: {exc}"
                 print(f"    Failed — {msg}", flush=True)
                 prices_failed += 1
-                log_scrape(supabase, bar_id, success=False, menu_found=False, error_message=msg)
+                if not args.dry_run:
+                    log_scrape(supabase, bar_id, success=False, menu_found=False, error_message=msg)
             except TimeoutError as exc:
                 msg = str(exc)
                 print(f"    Failed — {msg}", flush=True)
                 prices_failed += 1
-                log_scrape(supabase, bar_id, success=False, menu_found=False, error_message=msg)
+                if not args.dry_run:
+                    log_scrape(supabase, bar_id, success=False, menu_found=False, error_message=msg)
             except Exception as exc:
                 msg = str(exc)[:300]
                 print(f"    Failed — {msg}", flush=True)
                 prices_failed += 1
-                log_scrape(supabase, bar_id, success=False, menu_found=False, error_message=msg)
+                if not args.dry_run:
+                    log_scrape(supabase, bar_id, success=False, menu_found=False, error_message=msg)
             finally:
                 signal.alarm(0)  # cancel the alarm regardless of outcome
 
