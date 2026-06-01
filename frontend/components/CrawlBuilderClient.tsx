@@ -8,6 +8,17 @@ import type { BarOption } from '@/app/crawl-builder/page';
 
 const CrawlOutput = dynamic(() => import('./CrawlOutput'), { ssr: false });
 
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const VIBES = [
+  { id: 'cheapest', emoji: '🍺', label: 'Cheapest Round' },
+  { id: 'rowdy',    emoji: '⚡', label: 'Rowdy'          },
+  { id: 'chill',    emoji: '😌', label: 'Chill'          },
+  { id: 'sports',   emoji: '🏆', label: 'Sports'         },
+  { id: 'mixed',    emoji: '🎲', label: 'Mixed'          },
+] as const;
+type VibeId = (typeof VIBES)[number]['id'];
+
 const START_TIMES = [
   '15:00', '15:30', '16:00', '16:30', '17:00', '17:30',
   '18:00', '18:30', '19:00', '19:30', '20:00', '20:30',
@@ -33,6 +44,8 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): nu
   return R * 2 * Math.asin(Math.sqrt(a));
 }
 
+// ─── Component ────────────────────────────────────────────────────────────────
+
 export default function CrawlBuilderClient({
   bars,
   neighbourhoods,
@@ -40,6 +53,7 @@ export default function CrawlBuilderClient({
   bars: BarOption[];
   neighbourhoods: string[];
 }) {
+  // Mode
   const [mode, setMode] = useState<'bar' | 'neighbourhood'>('neighbourhood');
 
   // Option A — start from a specific bar
@@ -51,6 +65,11 @@ export default function CrawlBuilderClient({
 
   // Option B — pick a neighbourhood
   const [neighbourhood, setNeighbourhood] = useState('');
+
+  // New filters
+  const [vibe, setVibe] = useState<VibeId>('mixed');
+  const [budget, setBudget] = useState(30);
+  const [happyHourOnly, setHappyHourOnly] = useState(false);
 
   // Shared
   const [barCount, setBarCount] = useState(4);
@@ -115,8 +134,8 @@ export default function CrawlBuilderClient({
     );
   }
 
-  const canBuild =
-    !loading && (mode === 'neighbourhood' ? !!neighbourhood : !!selectedBar);
+  const budgetPerStop = Math.round(budget / barCount);
+  const canBuild = !loading && (mode === 'neighbourhood' ? !!neighbourhood : !!selectedBar);
 
   async function handleBuild() {
     if (!canBuild) return;
@@ -125,10 +144,11 @@ export default function CrawlBuilderClient({
     setCrawl(null);
     try {
       const day = DAY_SHORT[new Date().getDay()];
+      const shared = { barCount, startTime, day, vibe, budget, happyHourOnly };
       const body =
         mode === 'neighbourhood'
-          ? { neighbourhood, barCount, startTime, day }
-          : { fixedBarId: selectedBar!.id, barCount, startTime, day };
+          ? { ...shared, neighbourhood }
+          : { ...shared, fixedBarId: selectedBar!.id };
 
       const res = await fetch('/api/crawl-builder', {
         method: 'POST',
@@ -168,13 +188,13 @@ export default function CrawlBuilderClient({
             Build My <span className="text-[#F5A623]">Crawl</span>
           </h1>
           <p className="text-gray-500 text-base">
-            Tell us where and when — we'll plan your perfect bar crawl.
+            Tell us where and when — we&apos;ll plan your perfect bar crawl.
           </p>
         </div>
 
         <div className="bg-[#0d0d1a] border border-[#F5A623]/15 rounded-2xl p-6 sm:p-8 space-y-8">
 
-          {/* Mode toggle */}
+          {/* ── Mode toggle ────────────────────────────────────────────── */}
           <div>
             <label className="block text-xs font-black uppercase tracking-widest text-[#F5A623] mb-3">
               How do you want to start?
@@ -203,7 +223,7 @@ export default function CrawlBuilderClient({
             </div>
           </div>
 
-          {/* Option A: bar search + GPS */}
+          {/* ── Option A: bar search + GPS ──────────────────────────────── */}
           {mode === 'bar' && (
             <div>
               <label className="block text-xs font-black uppercase tracking-widest text-[#F5A623] mb-3">
@@ -240,8 +260,6 @@ export default function CrawlBuilderClient({
                     </div>
                   )}
                 </div>
-
-                {/* GPS button */}
                 <button
                   onClick={handleGPS}
                   disabled={gpsLoading}
@@ -255,7 +273,6 @@ export default function CrawlBuilderClient({
                   )}
                 </button>
               </div>
-
               {selectedBar && (
                 <p className="text-xs text-emerald-400 mt-2 font-semibold">
                   ✓ Starting at {selectedBar.name}
@@ -265,7 +282,7 @@ export default function CrawlBuilderClient({
             </div>
           )}
 
-          {/* Option B: neighbourhood dropdown */}
+          {/* ── Option B: neighbourhood dropdown ──────────────────────── */}
           {mode === 'neighbourhood' && (
             <div>
               <label className="block text-xs font-black uppercase tracking-widest text-[#F5A623] mb-3">
@@ -284,7 +301,80 @@ export default function CrawlBuilderClient({
             </div>
           )}
 
-          {/* Number of stops */}
+          {/* ── Vibe filter ────────────────────────────────────────────── */}
+          <div>
+            <label className="block text-xs font-black uppercase tracking-widest text-[#F5A623] mb-3">
+              What&apos;s the vibe tonight?
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+              {VIBES.map(v => (
+                <button
+                  key={v.id}
+                  onClick={() => setVibe(v.id)}
+                  className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border text-center transition-all duration-150 ${
+                    vibe === v.id
+                      ? 'bg-[#F5A623]/15 border-[#F5A623]/70 text-white shadow-[0_0_12px_rgba(245,166,35,0.15)]'
+                      : 'bg-[#16213e] border-[#F5A623]/10 text-gray-400 hover:border-[#F5A623]/30 hover:text-white'
+                  } ${v.id === 'mixed' ? 'col-span-2 sm:col-span-1' : ''}`}
+                >
+                  <span className="text-xl leading-none">{v.emoji}</span>
+                  <span className="text-[11px] font-black leading-tight">{v.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* ── Budget ─────────────────────────────────────────────────── */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <label className="text-xs font-black uppercase tracking-widest text-[#F5A623]">
+                Budget per person
+              </label>
+              <span className="text-2xl font-black text-white tabular-nums">${budget}</span>
+            </div>
+            <input
+              type="range"
+              min={15}
+              max={80}
+              step={5}
+              value={budget}
+              onChange={e => setBudget(Number(e.target.value))}
+              className="w-full accent-[#F5A623] cursor-pointer h-2 rounded-full"
+            />
+            <div className="flex justify-between items-center text-xs mt-2">
+              <span className="text-gray-600">$15</span>
+              <span className="text-[#F5A623]/60 font-semibold">
+                Est. {barCount} rounds · ~${budgetPerStop}/pint
+              </span>
+              <span className="text-gray-600">$80</span>
+            </div>
+          </div>
+
+          {/* ── Happy hour toggle ──────────────────────────────────────── */}
+          <div className="flex items-center justify-between gap-4 py-1">
+            <div>
+              <p className="text-sm font-black text-white">Happy hour stops only</p>
+              <p className="text-xs text-gray-600 mt-0.5">
+                Every stop must have active HH at arrival time
+              </p>
+            </div>
+            <button
+              onClick={() => setHappyHourOnly(v => !v)}
+              className={`shrink-0 relative inline-flex h-7 w-12 items-center rounded-full transition-colors duration-200 border ${
+                happyHourOnly
+                  ? 'bg-[#F5A623] border-[#F5A623]'
+                  : 'bg-[#16213e] border-[#F5A623]/20'
+              }`}
+            >
+              <span
+                className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${
+                  happyHourOnly ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+
+          {/* ── Number of stops ────────────────────────────────────────── */}
           <div>
             <div className="flex items-center justify-between mb-3">
               <label className="text-xs font-black uppercase tracking-widest text-[#F5A623]">
@@ -308,7 +398,7 @@ export default function CrawlBuilderClient({
             </div>
           </div>
 
-          {/* Start time */}
+          {/* ── Start time ─────────────────────────────────────────────── */}
           <div>
             <label className="block text-xs font-black uppercase tracking-widest text-[#F5A623] mb-3">
               Start Time
@@ -330,7 +420,7 @@ export default function CrawlBuilderClient({
             </div>
           </div>
 
-          {/* Submit */}
+          {/* ── Submit ─────────────────────────────────────────────────── */}
           <button
             onClick={handleBuild}
             disabled={!canBuild}
@@ -353,7 +443,7 @@ export default function CrawlBuilderClient({
 
         {!crawl && !loading && (
           <p className="text-center text-gray-700 text-xs mt-6">
-            We'll pick the best bars, calculate happy hours, and map your route.
+            We&apos;ll pick the best bars, calculate happy hours, and map your route.
           </p>
         )}
 

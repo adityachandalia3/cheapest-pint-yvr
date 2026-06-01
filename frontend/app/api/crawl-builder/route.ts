@@ -113,6 +113,16 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): nu
   return R * 2 * Math.asin(Math.sqrt(a));
 }
 
+// ─── Vibe config ─────────────────────────────────────────────────────────────
+
+type VibeType = 'cheapest' | 'rowdy' | 'chill' | 'sports' | 'mixed';
+
+const VIBE_TAGS: Partial<Record<VibeType, string[]>> = {
+  rowdy:  ['loud', 'lively', 'rowdy', 'party', 'energetic', 'nightlife'],
+  chill:  ['relaxed', 'cozy', 'low-key', 'low key', 'quiet', 'intimate', 'casual', 'laid-back'],
+  sports: ['sports bar', 'big screens', 'game day', 'sports', 'games'],
+};
+
 // ─── Scoring & Selection ─────────────────────────────────────────────────────
 
 function scoreBar(
@@ -120,27 +130,40 @@ function scoreBar(
   timeHHMM: string,
   day: string,
   selectedBars: RawBar[],
+  vibe: VibeType = 'mixed',
 ): { score: number; price: number | null; hh: boolean } {
   const hh = isHappyHour(bar, timeHHMM, day);
   const price = getCheapestPrice(bar, hh);
 
-  // Price score: normalize $4–$14 range (lower = better)
-  let priceScore = 0.45; // neutral for no-price bars
-  if (price !== null) {
-    priceScore = Math.max(0, Math.min(1, 1 - (price - 4) / 10));
+  const rawPriceScore = price !== null
+    ? Math.max(0, Math.min(1, 1 - (price - 4) / 10))
+    : 0.45;
+
+  const targetTags = VIBE_TAGS[vibe] ?? [];
+  const barTags = ((bar.vibe_profile?.tags ?? []) as string[]).map(t => t.toLowerCase());
+  const vibeMatch = targetTags.some(t => barTags.some(bt => bt.includes(t)));
+
+  let score: number;
+  switch (vibe) {
+    case 'cheapest':
+      score = rawPriceScore * 0.80 + (hh ? 0.20 : 0);
+      break;
+    case 'rowdy':
+    case 'chill':
+    case 'sports':
+      score = (vibeMatch ? 1 : 0) * 0.70 + rawPriceScore * 0.20 + (hh ? 0.10 : 0);
+      break;
+    default: { // mixed — price + diversity
+      const primaryTag = bar.vibe_profile?.tags?.[0];
+      const tagDupes = primaryTag
+        ? selectedBars.filter(b => b.vibe_profile?.tags?.[0] === primaryTag).length
+        : 0;
+      const diversityPenalty = tagDupes >= 2 ? 0.25 : tagDupes === 1 ? 0.10 : 0;
+      score = rawPriceScore * 0.45 + (hh ? 0.15 : 0) - diversityPenalty;
+    }
   }
 
-  // Happy hour bonus
-  const hhBonus = hh ? 0.15 : 0;
-
-  // Vibe diversity: penalise if we already have 2 bars with the same primary tag
-  const primaryTag = bar.vibe_profile?.tags?.[0];
-  const tagDupes = primaryTag
-    ? selectedBars.filter(b => b.vibe_profile?.tags?.[0] === primaryTag).length
-    : 0;
-  const diversityPenalty = tagDupes >= 2 ? 0.25 : tagDupes === 1 ? 0.1 : 0;
-
-  return { score: priceScore + hhBonus - diversityPenalty, price, hh };
+  return { score, price, hh };
 }
 
 const MAX_RADIUS_KM = 0.75; // hard cap — all stops must stay within this radius of the crawl centroid
@@ -161,10 +184,12 @@ function buildCrawl(
   day: string,
   minutesPerStop: number = 50,
   fixedFirst?: RawBar,
+  vibe: VibeType = 'mixed',
+  maxPricePerStop: number = Infinity,
+  happyHourOnly: boolean = false,
 ): Array<{ bar: RawBar; arrivalTime: string; price: number | null; hh: boolean }> {
   const stops: Array<{ bar: RawBar; arrivalTime: string; price: number | null; hh: boolean }> = [];
-  // candidates must not include fixedFirst — caller is responsible
-  const remaining = [...candidates];
+  const remaining = [...candidates]; // must not include fixedFirst
 
   if (fixedFirst) {
     const arrivalTime = addMinutes(startTime, 0);
@@ -178,38 +203,43 @@ function buildCrawl(
     const arrivalTime = addMinutes(startTime, i * minutesPerStop);
     const selectedBars = stops.map(s => s.bar);
 
-    // After first stop, enforce radius cap around crawl centroid
+    // Radius cap around crawl centroid
     const center = stops.length > 0 ? centroid(selectedBars) : null;
-    const pool = center
+    const radiusPool = center
       ? remaining.filter(b => {
           if (!b.latitude || !b.longitude) return false;
           return haversineKm(center.lat, center.lng, b.latitude, b.longitude) <= MAX_RADIUS_KM;
         })
       : remaining;
+    const radiusCandidates = radiusPool.length >= 1 ? radiusPool : remaining;
 
-    // Fall back to full remaining if radius is too tight
-    const candidates_ = pool.length >= 1 ? pool : remaining;
+    // Apply budget and happy-hour filters; fall back softly if empty
+    const filtered = radiusCandidates.filter(b => {
+      if (happyHourOnly && !isHappyHour(b, arrivalTime, day)) return false;
+      if (maxPricePerStop < Infinity) {
+        const bHh = isHappyHour(b, arrivalTime, day);
+        const bPrice = getCheapestPrice(b, bHh);
+        if (bPrice !== null && bPrice > maxPricePerStop) return false;
+      }
+      return true;
+    });
+    const pool = filtered.length >= 1 ? filtered : radiusCandidates;
 
     if (stops.length === 0) {
-      // No fixed first — score freely
-      const scored = candidates_.map(b => ({
-        bar: b,
-        ...scoreBar(b, arrivalTime, day, selectedBars),
-      }));
+      const scored = pool.map(b => ({ bar: b, ...scoreBar(b, arrivalTime, day, selectedBars, vibe) }));
       scored.sort((a, b) => b.score - a.score);
       const best = scored[0];
       stops.push({ bar: best.bar, arrivalTime, price: best.price, hh: best.hh });
       remaining.splice(remaining.findIndex(b => b.id === best.bar.id), 1);
     } else {
       const prev = stops[stops.length - 1].bar;
-      const scored = candidates_.map(b => {
-        const { score, price, hh } = scoreBar(b, arrivalTime, day, selectedBars);
+      const scored = pool.map(b => {
+        const { score, price, hh } = scoreBar(b, arrivalTime, day, selectedBars, vibe);
         const dist =
           prev.latitude && prev.longitude && b.latitude && b.longitude
             ? haversineKm(prev.latitude, prev.longitude, b.latitude, b.longitude)
             : 1;
-        const combined = score - dist * 0.2;
-        return { bar: b, score: combined, price, hh, dist };
+        return { bar: b, score: score - dist * 0.2, price, hh };
       });
       scored.sort((a, b) => b.score - a.score);
       const best = scored[0];
@@ -280,13 +310,20 @@ const SELECT_FIELDS = `
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { neighbourhood, fixedBarId, barCount, startTime, day } = body as {
+  const { neighbourhood, fixedBarId, barCount, startTime, day, vibe, budget, happyHourOnly } = body as {
     neighbourhood?: string;
     fixedBarId?: string;
     barCount: number;
     startTime: string;
     day: string;
+    vibe?: VibeType;
+    budget?: number;
+    happyHourOnly?: boolean;
   };
+
+  const vibeMode: VibeType = vibe ?? 'mixed';
+  const maxPricePerStop = budget && barCount ? budget / barCount : Infinity;
+  const hhOnly = happyHourOnly ?? false;
 
   if ((!neighbourhood && !fixedBarId) || !barCount || !startTime || !day) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -330,7 +367,7 @@ export async function POST(req: NextRequest) {
     }
 
     const hood = fixedBar.neighbourhood ?? 'Vancouver';
-    const selectedStops = buildCrawl(nearby, barCount, startTime, day, 50, fixedBar);
+    const selectedStops = buildCrawl(nearby, barCount, startTime, day, 50, fixedBar, vibeMode, maxPricePerStop, hhOnly);
 
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
     const reasons = await generateReasons(selectedStops, hood, anthropic);
@@ -396,7 +433,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const selectedStops = buildCrawl(candidates, barCount, startTime, day);
+  const selectedStops = buildCrawl(candidates, barCount, startTime, day, 50, undefined, vibeMode, maxPricePerStop, hhOnly);
 
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
   const reasons = await generateReasons(selectedStops, neighbourhood!, anthropic);
