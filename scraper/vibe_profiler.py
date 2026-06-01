@@ -249,7 +249,7 @@ def process_bar(
     return result
 
 
-def load_bars(sb: Client, limit: Optional[int] = None, bar_id: Optional[str] = None) -> list[dict]:
+def load_bars(sb: Client, limit: Optional[int] = None, bar_id: Optional[str] = None, no_vibe: bool = False) -> list[dict]:
     query = (
         sb.table("bars")
         .select(
@@ -262,6 +262,8 @@ def load_bars(sb: Client, limit: Optional[int] = None, bar_id: Optional[str] = N
     )
     if bar_id:
         query = query.eq("id", bar_id)
+    elif no_vibe:
+        query = query.is_("vibe_profile", "null")
     else:
         query = query.neq("price_entry_count", 0)
     if limit:
@@ -275,6 +277,7 @@ def main() -> None:
     mode.add_argument("--test", action="store_true", help="Run on first 3 bars only (dry-run, prints results)")
     mode.add_argument("--all", action="store_true", help="Run on all bars with price data")
     mode.add_argument("--bar-id", type=str, help="Run on a single bar by UUID")
+    parser.add_argument("--no-vibe", action="store_true", help="Target bars with no vibe profile (ignores price_entry_count filter)")
     parser.add_argument(
         "--model",
         default="claude-sonnet-4-6",
@@ -295,7 +298,7 @@ def main() -> None:
         print("\n\nReview the profiles above. Run with --all to process all bars.")
 
     elif args.all:
-        bars = load_bars(sb)
+        bars = load_bars(sb, no_vibe=args.no_vibe)
         print(f"Processing {len(bars)} bars...\n")
         ok = fail = 0
         for bar in bars:
