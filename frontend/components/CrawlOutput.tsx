@@ -1,8 +1,11 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { GoogleMap, DirectionsRenderer, useJsApiLoader } from '@react-google-maps/api';
 import type { CrawlResult, CrawlStop } from '@/app/api/crawl-builder/route';
+
+const CrawlPDFExport = dynamic(() => import('./CrawlPDFExport'), { ssr: false });
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -246,12 +249,15 @@ export default function CrawlOutput({
             {crawl.stops.length} stops · {totalHours > 0 ? `${totalHours}h ` : ''}{totalMins > 0 ? `${totalMins}m` : ''} · {crawl.total_walking_km} km on foot
           </p>
         </div>
-        <button
-          onClick={onRebuild}
-          className="text-xs text-[#F5A623]/60 hover:text-[#F5A623] border border-[#F5A623]/20 hover:border-[#F5A623]/50 px-3 py-1.5 rounded-lg transition-all font-semibold shrink-0"
-        >
-          ↺ Rebuild
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <CrawlPDFExport crawl={crawl} />
+          <button
+            onClick={onRebuild}
+            className="text-xs text-[#F5A623]/60 hover:text-[#F5A623] border border-[#F5A623]/20 hover:border-[#F5A623]/50 px-3 py-1.5 rounded-lg transition-all font-semibold"
+          >
+            ↺ Rebuild
+          </button>
+        </div>
       </div>
 
       {/* Two-column layout */}
