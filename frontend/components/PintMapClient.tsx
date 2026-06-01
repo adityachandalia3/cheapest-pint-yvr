@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import HeroSection from './HeroSection';
 import FilterBar from './FilterBar';
 import BarList from './BarList';
@@ -133,6 +134,16 @@ export default function PintMapClient({ initialBars }: { initialBars: Bar[] }) {
       />
 
       <HeroSection topBars={topThreeBars} />
+
+      {/* Crawl Builder CTA */}
+      <div className="flex justify-center px-4 py-6 bg-[#0d0d1a]">
+        <Link
+          href="/crawl-builder"
+          className="inline-flex items-center gap-3 bg-[#F5A623] hover:bg-[#e8961a] text-[#0d0d1a] font-black text-lg px-8 py-4 rounded-2xl transition-all duration-200 shadow-[0_0_30px_rgba(245,166,35,0.35)] hover:shadow-[0_0_40px_rgba(245,166,35,0.55)] hover:scale-105"
+        >
+          🍺 Build My Crawl
+        </Link>
+      </div>
 
       <Leaderboard
         bars16oz={leaderboard16oz}
