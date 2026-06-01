@@ -96,10 +96,16 @@ export default function PintMapClient({ initialBars }: { initialBars: Bar[] }) {
       );
   }, [bars, now, filters]);
 
-  const neighbourhoods = useMemo(
-    () => Array.from(new Set(bars.map(b => b.neighbourhood).filter(Boolean))).sort() as string[],
-    [bars]
-  );
+  const neighbourhoods = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const b of bars) {
+      if (b.neighbourhood) counts[b.neighbourhood] = (counts[b.neighbourhood] ?? 0) + 1;
+    }
+    return Object.entries(counts)
+      .filter(([, n]) => n > 3)
+      .map(([name]) => name)
+      .sort();
+  }, [bars]);
 
   const handleBarCardClick = useCallback((barId: string) => {
     setHighlightedBarId(barId);
