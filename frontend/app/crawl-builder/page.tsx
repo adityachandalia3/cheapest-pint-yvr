@@ -3,6 +3,14 @@ import CrawlBuilderClient from '@/components/CrawlBuilderClient';
 
 export const dynamic = 'force-dynamic';
 
+export interface BarOption {
+  id: string;
+  name: string;
+  neighbourhood: string | null;
+  latitude: number | null;
+  longitude: number | null;
+}
+
 export default async function CrawlBuilderPage() {
   const supabase = createClient(
     process.env.SUPABASE_URL!,
@@ -12,13 +20,16 @@ export default async function CrawlBuilderPage() {
 
   const { data } = await supabase
     .from('bars')
-    .select('neighbourhood')
+    .select('id, name, neighbourhood, latitude, longitude')
     .eq('is_permanently_closed', false)
-    .not('neighbourhood', 'is', null);
+    .not('latitude', 'is', null)
+    .not('longitude', 'is', null);
 
-  // Only show neighbourhoods with more than 3 bars
+  const bars: BarOption[] = (data ?? []) as BarOption[];
+
+  // Neighbourhoods with >3 bars for Option B dropdown
   const counts: Record<string, number> = {};
-  for (const b of data ?? []) {
+  for (const b of bars) {
     if (b.neighbourhood) counts[b.neighbourhood] = (counts[b.neighbourhood] ?? 0) + 1;
   }
   const neighbourhoods = Object.entries(counts)
@@ -26,5 +37,5 @@ export default async function CrawlBuilderPage() {
     .map(([name]) => name)
     .sort();
 
-  return <CrawlBuilderClient neighbourhoods={neighbourhoods} />;
+  return <CrawlBuilderClient bars={bars} neighbourhoods={neighbourhoods} />;
 }

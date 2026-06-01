@@ -16,6 +16,7 @@ interface RawBar {
   best_known_for: string | null;
   average_rating: number | null;
   vibe_profile: Record<string, any> | null;
+  price_entry_count: number | null;
   pint_prices: Array<{
     category: string;
     beer_name: string | null;
@@ -159,16 +160,26 @@ function buildCrawl(
   startTime: string,
   day: string,
   minutesPerStop: number = 50,
+  fixedFirst?: RawBar,
 ): Array<{ bar: RawBar; arrivalTime: string; price: number | null; hh: boolean }> {
   const stops: Array<{ bar: RawBar; arrivalTime: string; price: number | null; hh: boolean }> = [];
+  // candidates must not include fixedFirst — caller is responsible
   const remaining = [...candidates];
 
-  for (let i = 0; i < barCount; i++) {
+  if (fixedFirst) {
+    const arrivalTime = addMinutes(startTime, 0);
+    const hh = isHappyHour(fixedFirst, arrivalTime, day);
+    stops.push({ bar: fixedFirst, arrivalTime, price: getCheapestPrice(fixedFirst, hh), hh });
+  }
+
+  const startIdx = fixedFirst ? 1 : 0;
+
+  for (let i = startIdx; i < barCount; i++) {
     const arrivalTime = addMinutes(startTime, i * minutesPerStop);
     const selectedBars = stops.map(s => s.bar);
 
     // After first stop, enforce radius cap around crawl centroid
-    const center = i > 0 ? centroid(selectedBars) : null;
+    const center = stops.length > 0 ? centroid(selectedBars) : null;
     const pool = center
       ? remaining.filter(b => {
           if (!b.latitude || !b.longitude) return false;
@@ -179,7 +190,8 @@ function buildCrawl(
     // Fall back to full remaining if radius is too tight
     const candidates_ = pool.length >= 1 ? pool : remaining;
 
-    if (i === 0) {
+    if (stops.length === 0) {
+      // No fixed first — score freely
       const scored = candidates_.map(b => ({
         bar: b,
         ...scoreBar(b, arrivalTime, day, selectedBars),
@@ -196,7 +208,6 @@ function buildCrawl(
           prev.latitude && prev.longitude && b.latitude && b.longitude
             ? haversineKm(prev.latitude, prev.longitude, b.latitude, b.longitude)
             : 1;
-        // Stronger walking weight now that radius cap is the primary constraint
         const combined = score - dist * 0.2;
         return { bar: b, score: combined, price, hh, dist };
       });
@@ -260,16 +271,24 @@ Respond with ONLY valid JSON, no markdown:
 
 // ─── Route handler ────────────────────────────────────────────────────────────
 
+const SELECT_FIELDS = `
+  id, name, address, latitude, longitude, neighbourhood,
+  best_known_for, average_rating, vibe_profile, price_entry_count,
+  pint_prices(category, beer_name, price_cad, happy_hour_price_cad, pour_size_oz),
+  happy_hour_windows(days, start_time, end_time, notes)
+`;
+
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { neighbourhood, barCount, startTime, day } = body as {
-    neighbourhood: string;
+  const { neighbourhood, fixedBarId, barCount, startTime, day } = body as {
+    neighbourhood?: string;
+    fixedBarId?: string;
     barCount: number;
     startTime: string;
     day: string;
   };
 
-  if (!neighbourhood || !barCount || !startTime || !day) {
+  if ((!neighbourhood && !fixedBarId) || !barCount || !startTime || !day) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
   }
 
@@ -278,22 +297,94 @@ export async function POST(req: NextRequest) {
     process.env.SUPABASE_SERVICE_KEY!
   );
 
+  // ── Option A: start from a fixed bar ─────────────────────────────────────
+
+  if (fixedBarId) {
+    const { data: allBars, error } = await supabase
+      .from('bars')
+      .select(SELECT_FIELDS)
+      .eq('is_permanently_closed', false)
+      .not('latitude', 'is', null)
+      .not('longitude', 'is', null);
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    const all = (allBars ?? []) as RawBar[];
+    const fixedBar = all.find(b => b.id === fixedBarId);
+    if (!fixedBar) {
+      return NextResponse.json({ error: 'Starting bar not found.' }, { status: 404 });
+    }
+
+    // Candidates: bars within MAX_RADIUS_KM of fixedBar, excluding fixedBar itself
+    const nearby = all.filter(b => {
+      if (b.id === fixedBarId) return false;
+      if (!b.latitude || !b.longitude) return false;
+      return haversineKm(fixedBar.latitude!, fixedBar.longitude!, b.latitude, b.longitude) <= MAX_RADIUS_KM;
+    }).filter(b => (b.price_entry_count ?? 0) > 0 || b.vibe_profile != null);
+
+    if (nearby.length < barCount - 1) {
+      return NextResponse.json(
+        { error: `Not enough bars within walking distance of ${fixedBar.name} — only ${nearby.length + 1} found nearby.` },
+        { status: 422 }
+      );
+    }
+
+    const hood = fixedBar.neighbourhood ?? 'Vancouver';
+    const selectedStops = buildCrawl(nearby, barCount, startTime, day, 50, fixedBar);
+
+    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
+    const reasons = await generateReasons(selectedStops, hood, anthropic);
+
+    const stops: CrawlStop[] = selectedStops.map((s, i) => {
+      let walkingKm: number | null = null;
+      let walkingMinutes: number | null = null;
+      if (i > 0) {
+        const prev = selectedStops[i - 1].bar;
+        if (prev.latitude && prev.longitude && s.bar.latitude && s.bar.longitude) {
+          walkingKm = Math.round(haversineKm(prev.latitude, prev.longitude, s.bar.latitude, s.bar.longitude) * 100) / 100;
+          walkingMinutes = Math.round((walkingKm / 5) * 60);
+        }
+      }
+      return {
+        position: i + 1,
+        bar: s.bar,
+        arrival_time: formatTime12h(s.arrivalTime),
+        active_price: s.price,
+        is_happy_hour: s.hh,
+        walking_minutes_from_prev: walkingMinutes,
+        walking_km_from_prev: walkingKm,
+        reason: reasons[s.bar.id] ?? `A great ${hood} pick for your crawl.`,
+      };
+    });
+
+    const dayLabel = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+    const totalSpend = stops.reduce((sum, s) => sum + (s.active_price ?? 0), 0);
+    const totalWalkingKm = stops.reduce((sum, s) => sum + (s.walking_km_from_prev ?? 0), 0);
+
+    return NextResponse.json({
+      crawl: {
+        title: `Your ${hood} Crawl starting at ${fixedBar.name} — ${dayLabel}`,
+        neighbourhood: hood,
+        stops,
+        total_spend: Math.round(totalSpend * 100) / 100,
+        total_walking_km: Math.round(totalWalkingKm * 100) / 100,
+        total_duration_min: (barCount - 1) * 50 + 60,
+      } satisfies CrawlResult,
+    });
+  }
+
+  // ── Option B: neighbourhood-based ────────────────────────────────────────
+
   const { data: bars, error } = await supabase
     .from('bars')
-    .select(`
-      id, name, address, latitude, longitude, neighbourhood,
-      best_known_for, average_rating, vibe_profile, price_entry_count,
-      pint_prices(category, beer_name, price_cad, happy_hour_price_cad, pour_size_oz),
-      happy_hour_windows(days, start_time, end_time, notes)
-    `)
+    .select(SELECT_FIELDS)
     .eq('is_permanently_closed', false)
-    .eq('neighbourhood', neighbourhood)
+    .eq('neighbourhood', neighbourhood!)
     .not('latitude', 'is', null)
     .not('longitude', 'is', null);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Include bars with prices OR vibe profile
   const candidates = (bars ?? []).filter(
     b => (b.price_entry_count ?? 0) > 0 || b.vibe_profile != null
   ) as RawBar[];
@@ -308,21 +399,18 @@ export async function POST(req: NextRequest) {
   const selectedStops = buildCrawl(candidates, barCount, startTime, day);
 
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
-  const reasons = await generateReasons(selectedStops, neighbourhood, anthropic);
+  const reasons = await generateReasons(selectedStops, neighbourhood!, anthropic);
 
-  // Build final stops with walking distances
   const stops: CrawlStop[] = selectedStops.map((s, i) => {
     let walkingKm: number | null = null;
     let walkingMinutes: number | null = null;
-
     if (i > 0) {
       const prev = selectedStops[i - 1].bar;
       if (prev.latitude && prev.longitude && s.bar.latitude && s.bar.longitude) {
         walkingKm = Math.round(haversineKm(prev.latitude, prev.longitude, s.bar.latitude, s.bar.longitude) * 100) / 100;
-        walkingMinutes = Math.round((walkingKm / 5) * 60); // 5 km/h walking speed
+        walkingMinutes = Math.round((walkingKm / 5) * 60);
       }
     }
-
     return {
       position: i + 1,
       bar: s.bar,
@@ -337,18 +425,16 @@ export async function POST(req: NextRequest) {
 
   const totalSpend = stops.reduce((sum, s) => sum + (s.active_price ?? 0), 0);
   const totalWalkingKm = stops.reduce((sum, s) => sum + (s.walking_km_from_prev ?? 0), 0);
-  const totalDurationMin = (barCount - 1) * 50 + 60; // 50 min per stop + 1 hour at last bar
-
   const dayLabel = new Date().toLocaleDateString('en-US', { weekday: 'long' });
 
-  const result: CrawlResult = {
-    title: `Your ${neighbourhood} Crawl — ${dayLabel}`,
-    neighbourhood,
-    stops,
-    total_spend: Math.round(totalSpend * 100) / 100,
-    total_walking_km: Math.round(totalWalkingKm * 100) / 100,
-    total_duration_min: totalDurationMin,
-  };
-
-  return NextResponse.json({ crawl: result });
+  return NextResponse.json({
+    crawl: {
+      title: `Your ${neighbourhood} Crawl — ${dayLabel}`,
+      neighbourhood: neighbourhood!,
+      stops,
+      total_spend: Math.round(totalSpend * 100) / 100,
+      total_walking_km: Math.round(totalWalkingKm * 100) / 100,
+      total_duration_min: (barCount - 1) * 50 + 60,
+    } satisfies CrawlResult,
+  });
 }
