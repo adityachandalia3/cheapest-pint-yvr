@@ -16,19 +16,12 @@ export default function AboutPage() {
 
         <div className="prose-like space-y-6 text-stone-600 leading-relaxed text-base">
           <div>
-            <h2 className="text-xl font-black text-[#1c1917] mb-2">What is this?</h2>
+            <h2 className="text-xl font-black text-[#1c1917] mb-2">What is Pint Map YVR?</h2>
             <p>
-              Pint Map YVR is a simple idea: you should never have to pay more for a pint than you have to. We track beer prices across bars and pubs in Vancouver so you can find the cheapest cold one near you — right now, not from a blog post from three years ago.
-            </p>
-          </div>
-
-          <div>
-            <h2 className="text-xl font-black text-[#1c1917] mb-2">Why we built it</h2>
-            <p>
-              Vancouver is an expensive city. A round of drinks can set you back thirty, forty, fifty bucks before you&apos;ve even found a seat. We got tired of playing price roulette every time we went out, so we built the thing we wished existed — a live, always-updating map of where the cheapest pints are.
+              Pint Map YVR scans 100+ bars across Vancouver to find you the cheapest pint in the city. No hunting. No guessing. Just the best deal, right now.
             </p>
             <p className="mt-3">
-              It&apos;s not fancy. It just works.
+              But we&apos;re not just a price list. We&apos;ve gone deeper. Find Your Vibe lets you describe the night you want in plain English — &quot;lively sports bar with friends&quot; or &quot;chill spot for a date&quot; — and we&apos;ll match you with bars that actually fit. Want to hop between spots? The Bar Crawl Builder plans a multi-stop night out, starting cheap and building toward wherever you want to end up. It&apos;s an immersive experience, not a database.
             </p>
           </div>
 
@@ -36,20 +29,6 @@ export default function AboutPage() {
             <h2 className="text-xl font-black text-[#1c1917] mb-2">The World Cup is coming</h2>
             <p>
               Vancouver is one of the host cities for the 2026 FIFA World Cup, and that means thousands of football fans from around the world are going to be looking for a good bar to watch the game. We&apos;re building Pint Map YVR to be their first stop — helping visitors and locals alike find the best atmosphere, the best price, and the best pint in the city.
-            </p>
-          </div>
-
-          <div>
-            <h2 className="text-xl font-black text-[#1c1917] mb-2">Find Your Vibe</h2>
-            <p>
-              Price isn&apos;t everything. Sometimes you want a loud sports bar, sometimes a quiet craft beer spot, sometimes somewhere with a patio and a good playlist. Find Your Vibe lets you describe the kind of night you&apos;re after in plain English — &quot;lively pub to watch the game with friends&quot; or &quot;chill spot for a first date&quot; — and we&apos;ll match you with bars in Vancouver that actually fit. It&apos;s not a filter dropdown. It&apos;s a recommendation engine that understands what you mean.
-            </p>
-          </div>
-
-          <div>
-            <h2 className="text-xl font-black text-[#1c1917] mb-2">Bar Crawl Builder</h2>
-            <p>
-              Can&apos;t pick just one? The Bar Crawl Builder puts together a multi-stop night out for you — starting somewhere cheap and low-key, building toward a livelier vibe as the evening goes on. Tell it your neighbourhood, how many stops you want, and what kind of crowd you&apos;re after, and it&apos;ll plan the whole thing. You can even export the crawl as a PDF to share with your group before you head out.
             </p>
           </div>
 
