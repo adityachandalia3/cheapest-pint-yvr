@@ -14,67 +14,64 @@ const BEER_TYPES: { value: BeerCategory; label: string }[] = [
   { value: 'cheapest_ipa', label: 'IPA' },
 ];
 
+function pill(active: boolean) {
+  return `shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition-colors whitespace-nowrap ${
+    active
+      ? 'bg-[#B34207] text-white border-[#B34207]'
+      : 'bg-transparent text-stone-500 border-[#e8dcc8] hover:border-[#B34207]/40 hover:text-[#1c1917]'
+  }`;
+}
+
 export default function FilterBar({ filters, onFiltersChange, neighbourhoods }: Props) {
   return (
-    <div className="bg-[#16213e] border-b border-[#F5A623]/20 px-4 py-3 shadow-lg shadow-black/30">
-      <div className="max-w-6xl mx-auto flex flex-wrap gap-2 md:gap-3 items-center">
-        {/* Neighbourhood */}
-        <select
-          value={filters.neighbourhood}
-          onChange={e => onFiltersChange({ ...filters, neighbourhood: e.target.value })}
-          className="bg-[#1a1a2e] text-white border border-[#F5A623]/30 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#F5A623] cursor-pointer"
-        >
-          <option value="">All Neighbourhoods</option>
-          {neighbourhoods.map(n => (
-            <option key={n} value={n}>
-              {n}
-            </option>
-          ))}
-        </select>
-
-        {/* Beer type toggle */}
-        <div className="flex rounded-lg overflow-hidden border border-[#F5A623]/30">
-          {BEER_TYPES.map(({ value, label }) => (
-            <button
-              key={value}
-              onClick={() => onFiltersChange({ ...filters, beerType: value })}
-              className={`px-4 py-2 text-sm font-bold transition-colors ${
-                filters.beerType === value
-                  ? 'bg-[#F5A623] text-[#1a1a2e]'
-                  : 'bg-[#1a1a2e] text-gray-400 hover:text-white'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
+    <div className="bg-white border-b border-[#e8dcc8]">
+      <div
+        className="flex gap-2 px-4 py-2.5 overflow-x-auto"
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
+      >
+        {/* Neighbourhood — pill wrapping a transparent native select */}
+        <div className="relative shrink-0">
+          <span className={pill(!!filters.neighbourhood)}>
+            {filters.neighbourhood || 'All Neighbourhoods'}
+          </span>
+          <select
+            value={filters.neighbourhood}
+            onChange={e => onFiltersChange({ ...filters, neighbourhood: e.target.value })}
+            className="absolute inset-0 opacity-0 cursor-pointer w-full"
+            aria-label="Neighbourhood"
+          >
+            <option value="">All Neighbourhoods</option>
+            {neighbourhoods.map(n => (
+              <option key={n} value={n}>{n}</option>
+            ))}
+          </select>
         </div>
 
-        {/* Happy hour toggle */}
+        {/* Beer type pills */}
+        {BEER_TYPES.map(({ value, label }) => (
+          <button
+            key={value}
+            onClick={() => onFiltersChange({ ...filters, beerType: value })}
+            className={pill(filters.beerType === value)}
+          >
+            {label}
+          </button>
+        ))}
+
+        {/* Happy Hour */}
         <button
           onClick={() => onFiltersChange({ ...filters, happyHourOnly: !filters.happyHourOnly })}
-          className={`flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg border transition-colors ${
-            filters.happyHourOnly
-              ? 'bg-[#F5A623]/20 text-[#F5A623] border-[#F5A623]'
-              : 'bg-[#1a1a2e] text-gray-400 border-[#F5A623]/30 hover:text-white'
-          }`}
+          className={pill(filters.happyHourOnly)}
         >
-          🎉 Happy Hour Only
+          🎉 Happy Hour
         </button>
 
-        {/* World Cup Mode */}
-        <div className="relative flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg border border-white/10 text-gray-600 bg-[#1a1a2e] cursor-not-allowed select-none">
-          ⚽ World Cup Mode
-          <span className="text-[10px] font-black uppercase tracking-wide bg-white/10 text-gray-500 px-1.5 py-0.5 rounded-full">
-            Coming Soon
-          </span>
-        </div>
-
-        {/* Sort toggle */}
+        {/* Sort */}
         <button
           onClick={() =>
             onFiltersChange({ ...filters, sortBy: filters.sortBy === 'price' ? 'name' : 'price' })
           }
-          className="ml-auto px-4 py-2 text-sm font-bold rounded-lg border border-[#F5A623]/30 text-gray-400 hover:text-white bg-[#1a1a2e] transition-colors"
+          className={pill(false)}
         >
           Sort: {filters.sortBy === 'price' ? '$ Price' : 'A–Z'}
         </button>

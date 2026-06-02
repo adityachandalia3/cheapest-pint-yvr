@@ -3,13 +3,13 @@
 @tailwind utilities;
 
 :root {
-  --background: #1a1a2e;
-  --foreground: #ffffff;
+  --background: #fef9f0;
+  --foreground: #1c1917;
 }
 
 body {
-  background: #1a1a2e;
-  color: #ffffff;
+  background: #fef9f0;
+  color: #1c1917;
 }
 
 /* Google Maps InfoWindow overrides */

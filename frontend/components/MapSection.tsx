@@ -9,30 +9,29 @@ interface Props {
   bars: BarWithActivePrice[];
   cheapestBarId: string | null;
   highlightedBarId: string | null;
+  hoveredBarId?: string | null;
+  ranks?: Record<string, number>; // barId → rank (1-based); when set, uses numbered circle pins
   onBarSelect: (id: string | null) => void;
+  className?: string;
 }
 
 const VANCOUVER_CENTER = { lat: 49.2827, lng: -123.1207 };
 const MAP_CONTAINER_STYLE = { width: '100%', height: '100%' };
 
 const MAP_STYLES = [
-  { elementType: 'geometry', stylers: [{ color: '#1d2236' }] },
-  { elementType: 'labels.text.stroke', stylers: [{ color: '#1d2236' }] },
-  { elementType: 'labels.text.fill', stylers: [{ color: '#8a9bb0' }] },
-  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#2d3748' }] },
-  { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#9ca5b3' }] },
-  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#3d4e6b' }] },
-  { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#f3d19c' }] },
-  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0f1929' }] },
-  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#4a6074' }] },
+  { elementType: 'geometry', stylers: [{ color: '#f5f0e8' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#f5f0e8' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#78716c' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#ffffff' }] },
+  { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#57534e' }] },
+  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#fde8c4' }] },
+  { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#92400e' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#bfdbfe' }] },
+  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#3b82f6' }] },
   { featureType: 'poi', stylers: [{ visibility: 'off' }] },
   { featureType: 'transit', stylers: [{ visibility: 'off' }] },
-  { featureType: 'administrative', elementType: 'geometry', stylers: [{ color: '#2d3748' }] },
-  {
-    featureType: 'administrative.locality',
-    elementType: 'labels.text.fill',
-    stylers: [{ color: '#d59563' }],
-  },
+  { featureType: 'administrative', elementType: 'geometry', stylers: [{ color: '#e7e5e4' }] },
+  { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#44403c' }] },
 ];
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -41,7 +40,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   cheapest_ipa: '🟡 IPA',
 };
 
-export default function MapSection({ bars, cheapestBarId, highlightedBarId, onBarSelect }: Props) {
+export default function MapSection({ bars, cheapestBarId, highlightedBarId, hoveredBarId, ranks, onBarSelect, className }: Props) {
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '',
@@ -70,6 +69,25 @@ export default function MapSection({ bars, cheapestBarId, highlightedBarId, onBa
     };
   }, [isLoaded]);
 
+  const rankedIconCache = useMemo(() => {
+    if (!isLoaded) return {};
+    const RANK_COLORS: Record<number, string> = { 1: '#C9A227', 2: '#9E9E9E', 3: '#CD7F32' };
+    const cache: Record<number, google.maps.Icon> = {};
+    for (let rank = 1; rank <= 10; rank++) {
+      const fill = RANK_COLORS[rank] ?? '#B34207';
+      const size = rank <= 3 ? 36 : 30;
+      const r = size / 2;
+      const fontSize = rank <= 3 ? 15 : 13;
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><circle cx="${r}" cy="${r}" r="${r}" fill="${fill}"/><circle cx="${r}" cy="${r}" r="${r - 2}" fill="none" stroke="white" stroke-width="1.5"/><text x="${r}" y="${r + fontSize * 0.38}" text-anchor="middle" font-size="${fontSize}" font-weight="900" font-family="Inter,Arial,sans-serif" fill="white">${rank}</text></svg>`;
+      cache[rank] = {
+        url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+        scaledSize: new window.google.maps.Size(size, size),
+        anchor: new window.google.maps.Point(r, r),
+      };
+    }
+    return cache;
+  }, [isLoaded]);
+
   const onLoad = useCallback((mapInstance: google.maps.Map) => setMap(mapInstance), []);
   const onUnmount = useCallback(() => setMap(null), []);
 
@@ -82,23 +100,35 @@ export default function MapSection({ bars, cheapestBarId, highlightedBarId, onBa
     setSelectedBarId(highlightedBarId);
   }, [highlightedBarId, map, bars]);
 
+  // hoveredBarId (from leaderboard) shows InfoWindow without panning
+  useEffect(() => {
+    if (hoveredBarId !== undefined && hoveredBarId !== null) {
+      setSelectedBarId(hoveredBarId);
+    } else if (hoveredBarId === null) {
+      setSelectedBarId(prev => (prev === hoveredBarId ? null : prev));
+    }
+  }, [hoveredBarId]);
+
+  const displayBarId = hoveredBarId ?? selectedBarId;
   const selectedBar = useMemo(
-    () => bars.find(b => b.id === selectedBarId) ?? null,
-    [selectedBarId, bars]
+    () => bars.find(b => b.id === displayBarId) ?? null,
+    [displayBarId, bars]
   );
 
   const now = new Date();
 
+  const sizeClass = className ?? 'w-full h-[350px] md:h-[500px]';
+
   if (!isLoaded) {
     return (
-      <div className="w-full h-[400px] md:h-[560px] bg-[#16213e] flex items-center justify-center">
-        <div className="text-[#F5A623] text-lg font-bold animate-pulse">Loading map…</div>
+      <div className={`${sizeClass} bg-[#fef9f0] flex items-center justify-center`}>
+        <div className="text-stone-400 text-lg font-bold animate-pulse">Loading map…</div>
       </div>
     );
   }
 
   return (
-    <div className="w-full h-[400px] md:h-[560px]">
+    <div className={sizeClass}>
       <GoogleMap
         mapContainerStyle={MAP_CONTAINER_STYLE}
         center={VANCOUVER_CENTER}
@@ -109,12 +139,18 @@ export default function MapSection({ bars, cheapestBarId, highlightedBarId, onBa
       >
         {bars.map(bar => {
           if (!bar.latitude || !bar.longitude) return null;
-          const isCheapest = bar.id === cheapestBarId;
+          let icon: google.maps.Icon | undefined;
+          if (ranks) {
+            const rank = ranks[bar.id];
+            icon = rank ? rankedIconCache[rank] : undefined;
+          } else {
+            icon = bar.id === cheapestBarId ? goldIcon : regularIcon;
+          }
           return (
             <Marker
               key={bar.id}
               position={{ lat: bar.latitude, lng: bar.longitude }}
-              icon={isCheapest ? goldIcon : regularIcon}
+              icon={icon}
               onClick={() => {
                 setSelectedBarId(bar.id);
                 onBarSelect(bar.id);
@@ -188,8 +224,8 @@ export default function MapSection({ bars, cheapestBarId, highlightedBarId, onBa
                 rel="noopener noreferrer"
                 style={{
                   display: 'inline-block',
-                  background: '#F5A623',
-                  color: '#1a1a2e',
+                  background: '#B34207',
+                  color: '#ffffff',
                   padding: '6px 14px',
                   borderRadius: '20px',
                   fontWeight: 700,

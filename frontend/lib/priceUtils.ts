@@ -1,5 +1,13 @@
 import { Bar, PintPrice, BarWithActivePrice, BeerCategory } from './types';
 
+const DISPLAY_NAME_OVERRIDES: Record<string, string> = {
+  'the main - best sports bar restaurant on main st vancouver': 'The Main on Main',
+};
+
+export function getDisplayName(name: string): string {
+  return DISPLAY_NAME_OVERRIDES[name.toLowerCase()] ?? name;
+}
+
 function getVancouverTimeString(now?: Date): string {
   return (now ?? new Date()).toLocaleTimeString('sv-SE', {
     timeZone: 'America/Vancouver',

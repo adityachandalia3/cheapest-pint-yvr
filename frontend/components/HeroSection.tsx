@@ -2,45 +2,49 @@
 
 import { useEffect, useState } from 'react';
 import { BarWithActivePrice } from '@/lib/types';
-import { formatPourSize } from '@/lib/priceUtils';
+import { formatPourSize, getDisplayName } from '@/lib/priceUtils';
 
 const MEDALS = [
   {
     rank: 1,
     emoji: '🥇',
     label: 'Gold',
-    color: '#FFD700',
-    bg: 'from-[#3a2e00] to-[#1a1a2e]',
-    badge: 'bg-[#FFD700]/20 text-[#FFD700] border-[#FFD700]/40',
-    price: 'text-[#FFD700]',
-    button: 'bg-[#FFD700] text-[#1a1a2e] hover:bg-yellow-300',
-    shadow: 'shadow-[#FFD700]/20',
+    bg: 'from-[#fff9eb] to-[#fef9f0]',
+    badge: 'bg-amber-100 text-amber-700 border-amber-300',
+    rankColor: '#b45309',
   },
   {
     rank: 2,
     emoji: '🥈',
     label: 'Silver',
-    color: '#C0C0C0',
-    bg: 'from-[#252525] to-[#1a1a2e]',
-    badge: 'bg-[#C0C0C0]/20 text-[#C0C0C0] border-[#C0C0C0]/40',
-    price: 'text-[#C0C0C0]',
-    button: 'bg-[#C0C0C0] text-[#1a1a2e] hover:bg-gray-300',
-    shadow: 'shadow-[#C0C0C0]/10',
+    bg: 'from-[#f5f5f5] to-[#fef9f0]',
+    badge: 'bg-stone-100 text-stone-600 border-stone-300',
+    rankColor: '#6b7280',
   },
   {
     rank: 3,
     emoji: '🥉',
     label: 'Bronze',
-    color: '#CD7F32',
-    bg: 'from-[#2e1a00] to-[#1a1a2e]',
-    badge: 'bg-[#CD7F32]/20 text-[#CD7F32] border-[#CD7F32]/40',
-    price: 'text-[#CD7F32]',
-    button: 'bg-[#CD7F32] text-[#1a1a2e] hover:bg-amber-600',
-    shadow: 'shadow-[#CD7F32]/10',
+    bg: 'from-[#fff0e6] to-[#fef9f0]',
+    badge: 'bg-orange-100 text-orange-700 border-orange-300',
+    rankColor: '#92400e',
   },
 ];
 
 const ROTATE_MS = 4000;
+
+const CURATED_PHOTOS: { match: string; src: string }[] = [
+  { match: 'cambie',    src: '/bar-photos/cambie.jpg' },
+  { match: 'coco rico', src: '/bar-photos/coco-rico.jpg' },
+  { match: 'the main',  src: '/bar-photos/main.jpg' },
+  { match: 'mangos',    src: '/bar-photos/mangoes.jpg' },
+  { match: 'gallery',   src: '/bar-photos/gallery-ubc.jpg' },
+];
+
+function getCuratedPhoto(barName: string): string | null {
+  const lower = barName.toLowerCase();
+  return CURATED_PHOTOS.find(p => lower.includes(p.match))?.src ?? null;
+}
 
 export default function HeroSection({ topBars }: { topBars: BarWithActivePrice[] }) {
   const [index, setIndex] = useState(0);
@@ -52,16 +56,21 @@ export default function HeroSection({ topBars }: { topBars: BarWithActivePrice[]
     return () => clearInterval(t);
   }, [paused, topBars.length]);
 
+  const bar = topBars[index];
+  const medal = MEDALS[index];
+  const photoSrc = bar
+    ? (getCuratedPhoto(bar.name) ?? (bar.google_place_id
+        ? `/api/bar-photo?placeId=${encodeURIComponent(bar.google_place_id)}`
+        : null))
+    : null;
+
   if (topBars.length === 0) {
     return (
-      <section className="px-4 py-16 text-center text-gray-500 text-lg bg-[#0d0d1a]">
+      <section className="px-4 py-16 text-center text-stone-400 text-lg bg-[#fff4e6]">
         No bar data yet — run the scraper to populate prices.
       </section>
     );
   }
-
-  const bar = topBars[index];
-  const medal = MEDALS[index];
 
   const directionsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
     bar.name + ' ' + (bar.address ?? 'Vancouver BC')
@@ -69,90 +78,188 @@ export default function HeroSection({ topBars }: { topBars: BarWithActivePrice[]
 
   return (
     <section
-      className={`relative bg-gradient-to-b ${medal.bg} px-4 py-12 md:py-20 text-center overflow-hidden transition-all duration-700`}
+      className={`relative bg-gradient-to-br ${medal.bg} border-b border-[#fde8c4] transition-colors duration-700 overflow-hidden`}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
-      {/* Background decoration */}
-      <div className="absolute inset-0 pointer-events-none select-none" aria-hidden>
-        <span className="absolute top-6 left-6 text-7xl opacity-[0.04]">🍺</span>
-        <span className="absolute bottom-6 right-6 text-7xl opacity-[0.04]">🍺</span>
-      </div>
-
-      <div className="relative z-10 max-w-3xl mx-auto">
-        {/* Medal badge */}
-        <div className="flex items-center justify-center gap-2 mb-4">
-          <span
-            className={`inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-widest px-3 py-1.5 rounded-full border ${medal.badge}`}
-          >
-            {medal.emoji} {medal.label} · #{medal.rank} Cheapest Pint Right Now
+      {/* ── Mobile layout ─────────────────────────────────────────────── */}
+      <div className="md:hidden flex flex-col px-4 pt-3 pb-4">
+        {/* Live label */}
+        <div className="shrink-0 flex items-center justify-center gap-2 mb-2">
+          <span className="relative flex h-2 w-2 shrink-0">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+          </span>
+          <span className="text-[10px] font-black uppercase tracking-widest text-stone-500">
+            Cheapest pints in Vancouver right now
           </span>
         </div>
 
-        {/* Price */}
-        <div
-          className={`text-[5rem] sm:text-[7rem] md:text-[9rem] font-black leading-none mb-5 tabular-nums transition-colors duration-700 ${medal.price}`}
-        >
-          ${bar.activePrice.toFixed(2)}
-        </div>
-
-        {/* Bar name */}
-        <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-white mb-2 leading-tight">
-          {bar.name}
-        </h2>
-
-        {bar.neighbourhood && (
-          <p className="text-sm md:text-base font-semibold mb-2" style={{ color: medal.color + 'aa' }}>
-            {bar.neighbourhood}
-          </p>
-        )}
-
-        {bar.activeBeerName && (
-          <p className="text-gray-500 text-sm mb-5">
-            {bar.activeBeerName}
-            {formatPourSize(bar.activePourSize) && (
-              <span className="ml-2 text-gray-600">· {formatPourSize(bar.activePourSize)}</span>
-            )}
-          </p>
-        )}
-
-        {bar.isHappyHour && (
-          <div
-            className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full mb-5 border ${medal.badge}`}
-          >
-            🎉 Happy Hour Active
-          </div>
-        )}
-
-        <div className="mt-2">
-          <a
-            href={directionsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`inline-flex items-center gap-2 font-black text-base px-7 py-3.5 rounded-full transition-colors shadow-lg ${medal.button} ${medal.shadow}`}
-          >
-            📍 Get Directions
-          </a>
-        </div>
-
-        {/* Dot indicators */}
-        <div className="flex items-center justify-center gap-3 mt-8">
-          {topBars.slice(0, 3).map((_, i) => (
-            <button
-              key={i}
-              onClick={() => { setIndex(i); setPaused(true); }}
-              className="transition-all duration-300 rounded-full"
-              style={{
-                width: i === index ? 24 : 8,
-                height: 8,
-                background: i === index ? MEDALS[i].color : '#ffffff22',
-              }}
-              aria-label={`Show #${i + 1}`}
+        {/* Photo — fixed 220px, crops proportionally */}
+        <div className="h-[220px] w-full shrink-0 relative rounded-2xl overflow-hidden bg-[#fde8c4]/60 shadow-lg">
+          {photoSrc && (
+            <img
+              key={photoSrc}
+              src={photoSrc}
+              alt={bar.name}
+              className="w-full h-full object-cover"
+              onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
             />
-          ))}
+          )}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <span className="text-6xl opacity-20">🍺</span>
+          </div>
+          <div className="absolute top-3 left-3">
+            <span className={`inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${medal.badge}`}>
+              {medal.emoji} #{medal.rank} Cheapest
+            </span>
+          </div>
         </div>
 
-        <p className="text-gray-700 text-xs mt-5">Live prices · Auto-refreshes every 5 min</p>
+        {/* Details — compact, tight spacing so everything fits above the fold */}
+        <div className="text-center mt-2.5">
+          <div className="text-[2.75rem] font-black leading-none tabular-nums text-[#B34207]">
+            ${bar.activePrice.toFixed(2)}
+          </div>
+          <h2 className="text-base font-black text-[#1c1917] leading-tight mt-0.5">
+            {getDisplayName(bar.name)}
+          </h2>
+          <p className="text-sm font-black text-[#B34207] mt-0.5">{bar.neighbourhood ?? ''}</p>
+          <p className="text-[11px] text-stone-400 mt-0.5">
+            {bar.activeBeerName
+              ? `${bar.activeBeerName}${formatPourSize(bar.activePourSize) ? ` · ${formatPourSize(bar.activePourSize)}` : ''}`
+              : ''}
+          </p>
+
+          {bar.isHappyHour && (
+            <div className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full mt-1 bg-[#F5A623]/15 text-[#b45309] border border-[#F5A623]/40">
+              🎉 Happy Hour Active
+            </div>
+          )}
+
+          <div className="mt-2">
+            <a
+              href={directionsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 font-black text-xs px-5 py-2 rounded-full bg-[#B34207] hover:bg-[#8f3506] text-white shadow-[0_4px_16px_rgba(179,66,7,0.3)] transition-colors"
+            >
+              📍 Get Directions
+            </a>
+          </div>
+
+          <div className="flex items-center justify-center gap-2.5 mt-2">
+            {topBars.slice(0, 3).map((_, i) => (
+              <button
+                key={i}
+                onClick={() => { setIndex(i); setPaused(true); }}
+                className="transition-all duration-300 rounded-full"
+                style={{
+                  width: i === index ? 20 : 7,
+                  height: 7,
+                  background: i === index ? '#B34207' : '#1c191722',
+                }}
+                aria-label={`Show #${i + 1}`}
+              />
+            ))}
+            <span className="text-[10px] text-stone-400 ml-1">Live prices</span>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Desktop layout: original two-column ───────────────────────── */}
+      <div className="hidden md:block max-w-5xl mx-auto px-4 py-20">
+        <div className="flex flex-row gap-14 items-center">
+
+          {/* Photo */}
+          <div className="w-[44%] shrink-0">
+            <div className="relative w-full aspect-square rounded-2xl overflow-hidden bg-[#fde8c4]/60 shadow-xl">
+              {photoSrc && (
+                <img
+                  key={photoSrc}
+                  src={photoSrc}
+                  alt={bar.name}
+                  className="w-full h-full object-cover"
+                  onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                />
+              )}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <span className="text-6xl opacity-20">🍺</span>
+              </div>
+              <div className="absolute top-3 left-3">
+                <span className={`inline-flex items-center gap-1 text-[11px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full border ${medal.badge}`}>
+                  {medal.emoji} #{medal.rank} Cheapest
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Details */}
+          <div className="flex-1 text-left flex flex-col justify-center gap-0">
+            <div className="flex items-center justify-start gap-2 mb-1">
+              <span className="relative flex h-2.5 w-2.5 shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500" />
+              </span>
+              <span className="text-xs font-black uppercase tracking-widest text-stone-500">
+                Cheapest pints in Vancouver right now
+              </span>
+            </div>
+
+            <div className="text-[9rem] font-black leading-none tabular-nums text-[#B34207]">
+              ${bar.activePrice.toFixed(2)}
+            </div>
+
+            <h2 className="text-5xl font-black text-[#1c1917] leading-tight mt-1">
+              {getDisplayName(bar.name)}
+            </h2>
+
+            <p className="text-base font-black mt-1 min-h-[22px] text-[#B34207]">
+              {bar.neighbourhood ?? ''}
+            </p>
+
+            <p className="text-xs text-stone-400 mt-0.5 min-h-[16px]">
+              {bar.activeBeerName
+                ? `${bar.activeBeerName}${formatPourSize(bar.activePourSize) ? ` · ${formatPourSize(bar.activePourSize)}` : ''}`
+                : ''}
+            </p>
+
+            {bar.isHappyHour && (
+              <div className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full mt-2 bg-[#F5A623]/15 text-[#b45309] border border-[#F5A623]/40 self-start">
+                🎉 Happy Hour Active
+              </div>
+            )}
+
+            <div className="mt-3">
+              <a
+                href={directionsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 font-black text-sm px-6 py-3 rounded-full transition-all duration-200 bg-[#B34207] hover:bg-[#8f3506] text-white shadow-[0_4px_20px_rgba(179,66,7,0.3)]"
+              >
+                📍 Get Directions
+              </a>
+            </div>
+
+            <div className="flex items-center justify-start gap-3 mt-4">
+              {topBars.slice(0, 3).map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => { setIndex(i); setPaused(true); }}
+                  className="transition-all duration-300 rounded-full"
+                  style={{
+                    width: i === index ? 24 : 8,
+                    height: 8,
+                    background: i === index ? '#B34207' : '#1c191722',
+                  }}
+                  aria-label={`Show #${i + 1}`}
+                />
+              ))}
+              <span className="text-[10px] text-stone-400 ml-1">Live prices</span>
+            </div>
+          </div>
+
+        </div>
       </div>
     </section>
   );

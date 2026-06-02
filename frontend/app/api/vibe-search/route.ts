@@ -125,6 +125,7 @@ ${barContext}`;
         cheapest_price: activePrice,
         is_happy_hour: happyHour,
         tag: firstTag,
+        expense_rating: (vp?.price_value as string | undefined) ?? null,
       };
     })
     .filter(Boolean);

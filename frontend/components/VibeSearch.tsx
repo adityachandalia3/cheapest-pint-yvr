@@ -10,6 +10,15 @@ interface VibeResult {
   cheapest_price: number | null;
   is_happy_hour: boolean;
   tag: string | null;
+  expense_rating: string | null;
+}
+
+function formatExpenseRating(rating: string): string {
+  const lower = rating.toLowerCase();
+  if (lower.includes('budget') || lower.includes('cheap') || lower.includes('inexpensive')) return '$ Budget';
+  if (lower.includes('moderate') || lower.includes('mid')) return '$$ Moderate';
+  if (lower.includes('pricey') || lower.includes('expensive') || lower.includes('premium')) return '$$$ Pricey';
+  return rating;
 }
 
 function formatTag(tag: string): string {
@@ -31,14 +40,10 @@ export default function VibeSearch({
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Focus input when modal opens
   useEffect(() => {
-    if (isOpen) {
-      setTimeout(() => inputRef.current?.focus(), 80);
-    }
+    if (isOpen) setTimeout(() => inputRef.current?.focus(), 80);
   }, [isOpen]);
 
-  // Close on Escape
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     if (isOpen) window.addEventListener('keydown', handler);
@@ -76,19 +81,19 @@ export default function VibeSearch({
 
   return (
     <div
-      className="fixed inset-0 z-[200] flex items-start justify-center pt-16 pb-6 px-4 bg-black/75 backdrop-blur-sm"
+      className="fixed inset-0 z-[200] flex items-start justify-center pt-16 pb-6 px-4 bg-black/50 backdrop-blur-sm"
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="w-full max-w-2xl bg-[#0d0d1a] rounded-2xl border border-[#F5A623]/25 shadow-2xl shadow-black/60 flex flex-col max-h-[85vh]">
+      <div className="w-full max-w-2xl bg-white rounded-2xl border border-[#fde8c4] shadow-2xl shadow-black/20 flex flex-col max-h-[85vh]">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-[#F5A623]/10 shrink-0">
+        <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-[#fde8c4] shrink-0">
           <div>
-            <h2 className="text-xl font-black text-white tracking-tight">Find Your Vibe</h2>
-            <p className="text-xs text-white/30 mt-0.5">Describe your night — we'll pick your bar</p>
+            <h2 className="text-xl font-black text-[#1c1917] tracking-tight">Find Your Vibe</h2>
+            <p className="text-xs text-stone-400 mt-0.5">Describe your night — we&apos;ll pick your bar</p>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:text-white hover:bg-white/10 transition-all text-lg leading-none"
+            className="w-8 h-8 flex items-center justify-center rounded-full text-stone-400 hover:text-[#1c1917] hover:bg-stone-100 transition-all text-lg leading-none"
           >
             ✕
           </button>
@@ -97,7 +102,7 @@ export default function VibeSearch({
         {/* Scrollable content */}
         <div className="overflow-y-auto px-6 py-5 flex-1">
           {/* Search input */}
-          <div className="flex items-center gap-3 bg-[#16213e] rounded-xl border border-[#F5A623]/20 focus-within:border-[#F5A623]/50 focus-within:shadow-[0_0_20px_rgba(245,166,35,0.1)] transition-all duration-300 px-4 py-3">
+          <div className="flex items-center gap-3 bg-[#fef9f0] rounded-xl border border-[#fde8c4] focus-within:border-[#B34207]/50 focus-within:shadow-[0_0_0_3px_rgba(179,66,7,0.08)] transition-all duration-300 px-4 py-3">
             <span className="text-xl flex-shrink-0 select-none">🍺</span>
             <input
               ref={inputRef}
@@ -105,16 +110,16 @@ export default function VibeSearch({
               onChange={e => setQuery(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSearch()}
               placeholder="cheap pregame, cozy first date, loud sports bar..."
-              className="flex-1 bg-transparent outline-none text-white placeholder-white/20 text-sm min-w-0"
+              className="flex-1 bg-transparent outline-none text-[#1c1917] placeholder-stone-400 text-sm min-w-0"
             />
             <button
               onClick={handleSearch}
               disabled={loading || !query.trim()}
-              className="flex-shrink-0 bg-[#F5A623] hover:bg-[#e8961a] disabled:opacity-40 disabled:cursor-not-allowed text-black font-black px-4 py-2 rounded-lg text-sm transition-colors whitespace-nowrap"
+              className="flex-shrink-0 bg-[#B34207] hover:bg-[#8f3506] disabled:opacity-40 disabled:cursor-not-allowed text-white font-black px-4 py-2 rounded-lg text-sm transition-colors whitespace-nowrap"
             >
               {loading ? (
                 <span className="flex items-center gap-1.5">
-                  <span className="inline-block w-3 h-3 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                  <span className="inline-block w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   Scanning
                 </span>
               ) : 'Find My Bar'}
@@ -122,59 +127,70 @@ export default function VibeSearch({
           </div>
 
           {loading && (
-            <p className="mt-4 text-center text-white/30 text-xs animate-pulse">
+            <p className="mt-4 text-center text-stone-400 text-xs animate-pulse">
               Scanning bars across Vancouver for your perfect vibe...
             </p>
           )}
 
           {error && (
-            <p className="mt-4 text-center text-red-400 text-sm">{error}</p>
+            <p className="mt-4 text-center text-red-500 text-sm">{error}</p>
           )}
 
           {results && results.length > 0 && (
             <div className="mt-5 space-y-3">
-              <p className="text-xs text-white/25 text-center">Top {results.length} picks for tonight</p>
+              <p className="text-xs text-stone-400 text-center">Top {results.length} picks for tonight</p>
               {results.map((r, i) => (
                 <div
                   key={r.bar_id}
-                  className="bg-[#16213e] border border-[#F5A623]/15 hover:border-[#F5A623]/35 rounded-xl p-4 transition-all duration-200"
+                  className="vibe-card bg-[#fef9f0] border border-[#fde8c4] hover:border-[#B34207]/30 rounded-xl p-4 transition-all duration-200"
                 >
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-black text-white text-sm leading-tight">{r.bar_name}</h3>
+                        <h3 className="font-black text-[#1c1917] text-sm leading-tight">{r.bar_name}</h3>
                         {r.tag && (
-                          <span className="text-[10px] bg-[#F5A623]/10 text-[#F5A623] border border-[#F5A623]/25 px-1.5 py-0.5 rounded-full font-semibold capitalize">
+                          <span className="text-[10px] bg-[#F5A623]/10 text-[#b45309] border border-[#F5A623]/25 px-1.5 py-0.5 rounded-full font-semibold capitalize">
                             {formatTag(r.tag)}
                           </span>
                         )}
                       </div>
                       {r.neighbourhood && (
-                        <p className="text-xs text-white/30 mt-0.5">{r.neighbourhood}</p>
+                        <p className="text-xs text-stone-400 mt-0.5">{r.neighbourhood}</p>
                       )}
                     </div>
-                    <span className="shrink-0 w-6 h-6 rounded-full bg-[#F5A623]/10 flex items-center justify-center text-xs font-black text-[#F5A623]">
+                    <span className="shrink-0 w-6 h-6 rounded-full bg-[#B34207]/10 flex items-center justify-center text-xs font-black text-[#B34207]">
                       {i + 1}
                     </span>
                   </div>
-                  <p className="text-xs text-white/55 leading-relaxed mb-3">{r.match_reason}</p>
-                  <div className="flex items-center justify-between pt-2.5 border-t border-white/5">
-                    <div className="flex items-center gap-2">
-                      {r.cheapest_price != null && (
-                        <span className="text-[#F5A623] font-black text-lg leading-none">
-                          ${Number(r.cheapest_price).toFixed(2)}
-                        </span>
+                  <p className="text-xs text-stone-500 leading-relaxed mb-3">{r.match_reason}</p>
+                  <div className="flex items-center justify-between pt-2.5 border-t border-[#fde8c4]">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {r.cheapest_price != null ? (
+                        <>
+                          <span className="text-[#B34207] font-black text-lg leading-none">
+                            ${Number(r.cheapest_price).toFixed(2)}
+                          </span>
+                          <span className="text-[10px] text-stone-400">cheapest pint</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-[11px] text-stone-400 italic">Price info unavailable</span>
+                          {r.expense_rating && (
+                            <span className="text-[10px] bg-stone-100 text-stone-500 border border-stone-200 px-1.5 py-0.5 rounded-full font-semibold">
+                              {formatExpenseRating(r.expense_rating)}
+                            </span>
+                          )}
+                        </>
                       )}
-                      <span className="text-[10px] text-white/25">cheapest pint</span>
                       {r.is_happy_hour && (
-                        <span className="text-[10px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 px-1.5 py-0.5 rounded-full font-semibold">
+                        <span className="text-[10px] bg-[#F5A623]/10 text-[#b45309] border border-[#F5A623]/25 px-1.5 py-0.5 rounded-full font-semibold">
                           🍻 HH
                         </span>
                       )}
                     </div>
                     <button
                       onClick={() => handleShowOnMap(r.bar_id)}
-                      className="text-xs text-[#F5A623]/60 hover:text-[#F5A623] border border-[#F5A623]/20 hover:border-[#F5A623]/50 px-2.5 py-1 rounded-lg transition-all font-semibold"
+                      className="text-xs text-stone-500 hover:text-[#B34207] border border-[#fde8c4] hover:border-[#B34207]/40 px-2.5 py-1 rounded-lg transition-all font-semibold"
                     >
                       Show on map ↑
                     </button>

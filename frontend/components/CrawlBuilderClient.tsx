@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import type { CrawlResult } from '@/app/api/crawl-builder/route';
 import type { BarOption } from '@/app/crawl-builder/page';
@@ -53,20 +52,19 @@ export default function CrawlBuilderClient({
   bars: BarOption[];
   neighbourhoods: string[];
 }) {
-  // Mode
   const [mode, setMode] = useState<'bar' | 'neighbourhood'>('neighbourhood');
 
-  // Option A — start from a specific bar
+  // Option A
   const [barSearch, setBarSearch] = useState('');
   const [selectedBar, setSelectedBar] = useState<BarOption | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [gpsLoading, setGpsLoading] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
 
-  // Option B — pick a neighbourhood
+  // Option B
   const [neighbourhood, setNeighbourhood] = useState('');
 
-  // New filters
+  // Filters
   const [vibe, setVibe] = useState<VibeId>('mixed');
   const [budget, setBudget] = useState(30);
   const [happyHourOnly, setHappyHourOnly] = useState(false);
@@ -78,7 +76,6 @@ export default function CrawlBuilderClient({
   const [error, setError] = useState<string | null>(null);
   const [crawl, setCrawl] = useState<CrawlResult | null>(null);
 
-  // Close suggestions on outside click
   useEffect(() => {
     function handler(e: MouseEvent) {
       if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
@@ -166,46 +163,33 @@ export default function CrawlBuilderClient({
   }
 
   return (
-    <div className="min-h-screen bg-[#1a1a2e] text-white">
-      <header className="px-4 py-3 flex items-center gap-4 border-b border-[#F5A623]/10 bg-[#0d0d1a]">
-        <Link
-          href="/"
-          className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm font-semibold shrink-0"
-        >
-          <span className="text-base">←</span>
-          <span className="hidden sm:inline">Back</span>
-        </Link>
-        <div className="flex items-center gap-2">
-          <span className="text-2xl">🍺</span>
-          <span className="font-black text-lg tracking-tight text-[#F5A623]">PINT MAP YVR</span>
-        </div>
-      </header>
+    <div className="min-h-screen bg-[#fef9f0] text-[#1c1917]">
 
       <div className="max-w-2xl mx-auto px-4 py-12">
         {/* Title */}
         <div className="text-center mb-10">
-          <h1 className="text-4xl sm:text-5xl font-black text-white tracking-tight leading-none mb-3">
-            Build My <span className="text-[#F5A623]">Crawl</span>
+          <h1 className="text-4xl sm:text-5xl font-black text-[#1c1917] tracking-tight leading-none mb-3">
+            Build My <span className="text-[#B34207]">Crawl</span>
           </h1>
-          <p className="text-gray-500 text-base">
+          <p className="text-stone-500 text-base">
             Tell us where and when — we&apos;ll plan your perfect bar crawl.
           </p>
         </div>
 
-        <div className="bg-[#0d0d1a] border border-[#F5A623]/15 rounded-2xl p-6 sm:p-8 space-y-8">
+        <div className="bg-white border border-[#fde8c4] rounded-2xl p-6 sm:p-8 space-y-8 shadow-sm">
 
           {/* ── Mode toggle ────────────────────────────────────────────── */}
           <div>
-            <label className="block text-xs font-black uppercase tracking-widest text-[#F5A623] mb-3">
+            <label className="block text-xs font-black uppercase tracking-widest text-[#B34207] mb-3">
               How do you want to start?
             </label>
-            <div className="grid grid-cols-2 gap-1.5 bg-[#16213e] p-1.5 rounded-xl">
+            <div className="grid grid-cols-2 gap-1.5 bg-[#fef9f0] p-1.5 rounded-xl border border-[#fde8c4]">
               <button
                 onClick={() => setMode('bar')}
                 className={`py-2.5 px-4 rounded-lg text-sm font-bold transition-all duration-200 ${
                   mode === 'bar'
-                    ? 'bg-[#F5A623] text-[#0d0d1a] shadow-sm'
-                    : 'text-gray-400 hover:text-white'
+                    ? 'bg-[#B34207] text-white shadow-sm'
+                    : 'text-stone-500 hover:text-[#1c1917]'
                 }`}
               >
                 📍 From a bar
@@ -214,8 +198,8 @@ export default function CrawlBuilderClient({
                 onClick={() => setMode('neighbourhood')}
                 className={`py-2.5 px-4 rounded-lg text-sm font-bold transition-all duration-200 ${
                   mode === 'neighbourhood'
-                    ? 'bg-[#F5A623] text-[#0d0d1a] shadow-sm'
-                    : 'text-gray-400 hover:text-white'
+                    ? 'bg-[#B34207] text-white shadow-sm'
+                    : 'text-stone-500 hover:text-[#1c1917]'
                 }`}
               >
                 🗺 By neighbourhood
@@ -226,7 +210,7 @@ export default function CrawlBuilderClient({
           {/* ── Option A: bar search + GPS ──────────────────────────────── */}
           {mode === 'bar' && (
             <div>
-              <label className="block text-xs font-black uppercase tracking-widest text-[#F5A623] mb-3">
+              <label className="block text-xs font-black uppercase tracking-widest text-[#B34207] mb-3">
                 Where are you starting?
               </label>
               <div className="flex gap-2">
@@ -241,19 +225,19 @@ export default function CrawlBuilderClient({
                     }}
                     onFocus={() => setShowSuggestions(true)}
                     placeholder="Search bars..."
-                    className="w-full bg-[#16213e] border border-[#F5A623]/20 focus:border-[#F5A623]/60 rounded-xl px-4 py-3.5 text-white text-sm outline-none transition-colors placeholder-gray-600"
+                    className="w-full bg-[#fef9f0] border border-[#fde8c4] focus:border-[#B34207]/50 rounded-xl px-4 py-3.5 text-[#1c1917] text-sm outline-none transition-colors placeholder-stone-400"
                   />
                   {showSuggestions && suggestions.length > 0 && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-[#16213e] border border-[#F5A623]/20 rounded-xl overflow-hidden z-10 shadow-2xl">
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#fde8c4] rounded-xl overflow-hidden z-10 shadow-lg">
                       {suggestions.map(bar => (
                         <button
                           key={bar.id}
                           onMouseDown={() => selectBar(bar)}
-                          className="w-full px-4 py-3 text-left hover:bg-[#1e2d4a] transition-colors border-b border-[#F5A623]/5 last:border-0"
+                          className="w-full px-4 py-3 text-left hover:bg-[#fff4e6] transition-colors border-b border-[#fde8c4] last:border-0"
                         >
-                          <div className="text-white text-sm font-semibold">{bar.name}</div>
+                          <div className="text-[#1c1917] text-sm font-semibold">{bar.name}</div>
                           {bar.neighbourhood && (
-                            <div className="text-gray-500 text-xs mt-0.5">{bar.neighbourhood}</div>
+                            <div className="text-stone-400 text-xs mt-0.5">{bar.neighbourhood}</div>
                           )}
                         </button>
                       ))}
@@ -264,17 +248,17 @@ export default function CrawlBuilderClient({
                   onClick={handleGPS}
                   disabled={gpsLoading}
                   title="Use my current location"
-                  className="shrink-0 bg-[#16213e] border border-[#F5A623]/20 hover:border-[#F5A623]/60 px-4 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center"
+                  className="shrink-0 bg-[#fef9f0] border border-[#fde8c4] hover:border-[#B34207]/50 px-4 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center"
                 >
                   {gpsLoading ? (
-                    <span className="inline-block w-4 h-4 border-2 border-[#F5A623]/30 border-t-[#F5A623] rounded-full animate-spin" />
+                    <span className="inline-block w-4 h-4 border-2 border-[#B34207]/30 border-t-[#B34207] rounded-full animate-spin" />
                   ) : (
                     <span className="text-lg leading-none">📍</span>
                   )}
                 </button>
               </div>
               {selectedBar && (
-                <p className="text-xs text-emerald-400 mt-2 font-semibold">
+                <p className="text-xs text-emerald-600 mt-2 font-semibold">
                   ✓ Starting at {selectedBar.name}
                   {selectedBar.neighbourhood ? ` · ${selectedBar.neighbourhood}` : ''}
                 </p>
@@ -285,13 +269,13 @@ export default function CrawlBuilderClient({
           {/* ── Option B: neighbourhood dropdown ──────────────────────── */}
           {mode === 'neighbourhood' && (
             <div>
-              <label className="block text-xs font-black uppercase tracking-widest text-[#F5A623] mb-3">
+              <label className="block text-xs font-black uppercase tracking-widest text-[#B34207] mb-3">
                 Neighbourhood
               </label>
               <select
                 value={neighbourhood}
                 onChange={e => setNeighbourhood(e.target.value)}
-                className="w-full bg-[#16213e] border border-[#F5A623]/20 focus:border-[#F5A623]/60 rounded-xl px-4 py-3.5 text-white text-sm outline-none transition-colors appearance-none cursor-pointer"
+                className="w-full bg-[#fef9f0] border border-[#fde8c4] focus:border-[#B34207]/50 rounded-xl px-4 py-3.5 text-[#1c1917] text-sm outline-none transition-colors appearance-none cursor-pointer"
               >
                 <option value="">Pick a neighbourhood...</option>
                 {neighbourhoods.map(n => (
@@ -303,7 +287,7 @@ export default function CrawlBuilderClient({
 
           {/* ── Vibe filter ────────────────────────────────────────────── */}
           <div>
-            <label className="block text-xs font-black uppercase tracking-widest text-[#F5A623] mb-3">
+            <label className="block text-xs font-black uppercase tracking-widest text-[#B34207] mb-3">
               What&apos;s the vibe tonight?
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
@@ -313,8 +297,8 @@ export default function CrawlBuilderClient({
                   onClick={() => setVibe(v.id)}
                   className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border text-center transition-all duration-150 ${
                     vibe === v.id
-                      ? 'bg-[#F5A623]/15 border-[#F5A623]/70 text-white shadow-[0_0_12px_rgba(245,166,35,0.15)]'
-                      : 'bg-[#16213e] border-[#F5A623]/10 text-gray-400 hover:border-[#F5A623]/30 hover:text-white'
+                      ? 'bg-[#B34207]/8 border-[#B34207]/60 text-[#1c1917] shadow-sm'
+                      : 'bg-[#fef9f0] border-[#fde8c4] text-stone-500 hover:border-[#B34207]/30 hover:text-[#1c1917]'
                   } ${v.id === 'mixed' ? 'col-span-2 sm:col-span-1' : ''}`}
                 >
                   <span className="text-xl leading-none">{v.emoji}</span>
@@ -327,10 +311,10 @@ export default function CrawlBuilderClient({
           {/* ── Budget ─────────────────────────────────────────────────── */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <label className="text-xs font-black uppercase tracking-widest text-[#F5A623]">
+              <label className="text-xs font-black uppercase tracking-widest text-[#B34207]">
                 Budget per person
               </label>
-              <span className="text-2xl font-black text-white tabular-nums">${budget}</span>
+              <span className="text-2xl font-black text-[#1c1917] tabular-nums">${budget}</span>
             </div>
             <input
               type="range"
@@ -339,22 +323,22 @@ export default function CrawlBuilderClient({
               step={5}
               value={budget}
               onChange={e => setBudget(Number(e.target.value))}
-              className="w-full accent-[#F5A623] cursor-pointer h-2 rounded-full"
+              className="w-full accent-[#B34207] cursor-pointer h-2 rounded-full"
             />
             <div className="flex justify-between items-center text-xs mt-2">
-              <span className="text-gray-600">$15</span>
-              <span className="text-[#F5A623]/60 font-semibold">
+              <span className="text-stone-400">$15</span>
+              <span className="text-[#B34207]/70 font-semibold">
                 Est. {barCount} rounds · ~${budgetPerStop}/pint
               </span>
-              <span className="text-gray-600">$80</span>
+              <span className="text-stone-400">$80</span>
             </div>
           </div>
 
           {/* ── Happy hour toggle ──────────────────────────────────────── */}
           <div className="flex items-center justify-between gap-4 py-1">
             <div>
-              <p className="text-sm font-black text-white">Happy hour stops only</p>
-              <p className="text-xs text-gray-600 mt-0.5">
+              <p className="text-sm font-black text-[#1c1917]">Happy hour stops only</p>
+              <p className="text-xs text-stone-400 mt-0.5">
                 Every stop must have active HH at arrival time
               </p>
             </div>
@@ -362,8 +346,8 @@ export default function CrawlBuilderClient({
               onClick={() => setHappyHourOnly(v => !v)}
               className={`shrink-0 relative inline-flex h-7 w-12 items-center rounded-full transition-colors duration-200 border ${
                 happyHourOnly
-                  ? 'bg-[#F5A623] border-[#F5A623]'
-                  : 'bg-[#16213e] border-[#F5A623]/20'
+                  ? 'bg-[#B34207] border-[#B34207]'
+                  : 'bg-[#fef9f0] border-[#fde8c4]'
               }`}
             >
               <span
@@ -377,11 +361,11 @@ export default function CrawlBuilderClient({
           {/* ── Number of stops ────────────────────────────────────────── */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <label className="text-xs font-black uppercase tracking-widest text-[#F5A623]">
+              <label className="text-xs font-black uppercase tracking-widest text-[#B34207]">
                 Number of Stops
               </label>
-              <span className="text-2xl font-black text-white tabular-nums">
-                {barCount} <span className="text-sm font-semibold text-gray-500">bars</span>
+              <span className="text-2xl font-black text-[#1c1917] tabular-nums">
+                {barCount} <span className="text-sm font-semibold text-stone-400">bars</span>
               </span>
             </div>
             <input
@@ -391,16 +375,16 @@ export default function CrawlBuilderClient({
               step={1}
               value={barCount}
               onChange={e => setBarCount(Number(e.target.value))}
-              className="w-full accent-[#F5A623] cursor-pointer h-2 rounded-full"
+              className="w-full accent-[#B34207] cursor-pointer h-2 rounded-full"
             />
-            <div className="flex justify-between text-xs text-gray-600 mt-1.5 px-0.5">
+            <div className="flex justify-between text-xs text-stone-400 mt-1.5 px-0.5">
               <span>3</span><span>4</span><span>5</span><span>6</span>
             </div>
           </div>
 
           {/* ── Start time ─────────────────────────────────────────────── */}
           <div>
-            <label className="block text-xs font-black uppercase tracking-widest text-[#F5A623] mb-3">
+            <label className="block text-xs font-black uppercase tracking-widest text-[#B34207] mb-3">
               Start Time
             </label>
             <div className="grid grid-cols-5 gap-2">
@@ -410,8 +394,8 @@ export default function CrawlBuilderClient({
                   onClick={() => setStartTime(t)}
                   className={`py-2.5 rounded-xl text-xs font-bold transition-all duration-150 border ${
                     startTime === t
-                      ? 'bg-[#F5A623] text-[#0d0d1a] border-[#F5A623]'
-                      : 'bg-[#16213e] text-gray-400 border-[#F5A623]/10 hover:border-[#F5A623]/40 hover:text-white'
+                      ? 'bg-[#B34207] text-white border-[#B34207]'
+                      : 'bg-[#fef9f0] text-stone-500 border-[#fde8c4] hover:border-[#B34207]/30 hover:text-[#1c1917]'
                   }`}
                 >
                   {formatTime(t)}
@@ -424,11 +408,11 @@ export default function CrawlBuilderClient({
           <button
             onClick={handleBuild}
             disabled={!canBuild}
-            className="w-full bg-[#F5A623] hover:bg-[#e8961a] disabled:opacity-40 disabled:cursor-not-allowed text-[#0d0d1a] font-black text-lg py-4 rounded-2xl transition-all duration-200 shadow-[0_0_30px_rgba(245,166,35,0.3)] hover:shadow-[0_0_40px_rgba(245,166,35,0.5)] hover:scale-[1.02]"
+            className="w-full bg-[#B34207] hover:bg-[#8f3506] disabled:opacity-40 disabled:cursor-not-allowed text-white font-black text-lg py-4 rounded-2xl transition-all duration-200 shadow-[0_4px_24px_rgba(179,66,7,0.3)] hover:shadow-[0_6px_32px_rgba(179,66,7,0.45)] hover:scale-[1.02]"
           >
             {loading ? (
               <span className="flex items-center justify-center gap-2">
-                <span className="inline-block w-4 h-4 border-2 border-[#0d0d1a]/30 border-t-[#0d0d1a] rounded-full animate-spin" />
+                <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 Building your crawl...
               </span>
             ) : (
@@ -438,11 +422,11 @@ export default function CrawlBuilderClient({
         </div>
 
         {error && (
-          <p className="text-center text-red-400 text-sm mt-4">{error}</p>
+          <p className="text-center text-red-500 text-sm mt-4">{error}</p>
         )}
 
         {!crawl && !loading && (
-          <p className="text-center text-gray-700 text-xs mt-6">
+          <p className="text-center text-stone-400 text-xs mt-6">
             We&apos;ll pick the best bars, calculate happy hours, and map your route.
           </p>
         )}
