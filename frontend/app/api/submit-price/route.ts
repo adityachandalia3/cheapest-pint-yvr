@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { getSupabaseClient } from '@/lib/supabase';
 
 export async function POST(req: Request) {
+  const supabase = getSupabaseClient();
   const { bar_id, bar_name, beer_name, category, price, submitter_name } = await req.json();
 
   if (!bar_name || !category || !price) {

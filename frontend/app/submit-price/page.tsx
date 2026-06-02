@@ -1,5 +1,7 @@
-import { supabase } from '@/lib/supabase';
+import { getSupabaseClient } from '@/lib/supabase';
 import SubmitPriceForm from '@/components/SubmitPriceForm';
+
+export const dynamic = 'force-dynamic';
 
 export const metadata = {
   title: 'Submit a Price — Pint Map YVR',
@@ -11,6 +13,7 @@ export interface BarOption {
 }
 
 export default async function SubmitPricePage() {
+  const supabase = getSupabaseClient();
   const { data } = await supabase
     .from('bars')
     .select('id, name')
@@ -22,7 +25,6 @@ export default async function SubmitPricePage() {
   return (
     <main className="min-h-screen bg-[#fef9f0] text-[#1c1917]">
       <div className="max-w-2xl mx-auto px-4 py-12 sm:py-16">
-        {/* Header */}
         <div className="mb-8">
           <span className="inline-block text-xs font-black uppercase tracking-widest text-[#B34207] mb-3">
             🍺 Community Prices
@@ -35,7 +37,6 @@ export default async function SubmitPricePage() {
           </p>
         </div>
 
-        {/* Form card */}
         <div className="bg-white border border-[#fde8c4] rounded-2xl p-6 sm:p-8">
           <SubmitPriceForm bars={bars} />
         </div>
