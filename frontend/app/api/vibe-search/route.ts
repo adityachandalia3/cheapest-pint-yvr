@@ -8,12 +8,29 @@ export const dynamic = 'force-dynamic';
 
 const cache = new Map<string, { data: unknown; expiresAt: number }>();
 
-function buildBarContext(bar: any): string {
+type DbPintPrice = {
+  category: string;
+  price_cad: number;
+  happy_hour_price_cad: number | null;
+  beer_name: string | null;
+};
+
+type DbBar = {
+  id: string;
+  name: string;
+  neighbourhood: string | null;
+  best_known_for: string | null;
+  vibe_profile: Record<string, unknown> | null;
+  pint_prices: DbPintPrice[] | null;
+  happy_hour_windows: { days: string[]; start_time: string; end_time: string; notes: string | null }[] | null;
+};
+
+function buildBarContext(bar: DbBar): string {
   const vp = bar.vibe_profile ?? {};
-  const tags = (vp.tags ?? []).join(', ');
-  const bestFor = (vp.best_for ?? []).join(', ');
+  const tags = ((vp.tags as string[] | undefined) ?? []).join(', ');
+  const bestFor = ((vp.best_for as string[] | undefined) ?? []).join(', ');
   const prices = (bar.pint_prices ?? [])
-    .map((p: any) => {
+    .map((p) => {
       const cat = p.category.replace('cheapest_', '');
       const hh = p.happy_hour_price_cad ? ` (HH: $${p.happy_hour_price_cad})` : '';
       return `${cat}: $${p.price_cad}${hh}`;
@@ -23,12 +40,12 @@ function buildBarContext(bar: any): string {
   return `[ID:${bar.id}] ${bar.name} (${bar.neighbourhood ?? 'Vancouver'})
 Best known for: ${bar.best_known_for ?? 'N/A'}
 Tags: ${tags}
-Crowd: ${vp.crowd ?? 'N/A'}
-Energy: ${vp.energy ?? 'N/A'}
+Crowd: ${(vp.crowd as string | undefined) ?? 'N/A'}
+Energy: ${(vp.energy as string | undefined) ?? 'N/A'}
 Best for: ${bestFor}
-Avoid if: ${vp.avoid_if ?? 'N/A'}
-Price value: ${vp.price_value ?? 'N/A'}
-Night arc: ${vp.night_arc ?? 'N/A'}
+Avoid if: ${(vp.avoid_if as string | undefined) ?? 'N/A'}
+Price value: ${(vp.price_value as string | undefined) ?? 'N/A'}
+Night arc: ${(vp.night_arc as string | undefined) ?? 'N/A'}
 Prices: ${prices}`;
 }
 
@@ -64,7 +81,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const barsWithVibes = (bars ?? []).filter(b => b.vibe_profile);
+  const barsWithVibes = ((bars ?? []) as DbBar[]).filter(b => b.vibe_profile);
   const barContext = barsWithVibes.map(buildBarContext).join('\n\n---\n\n');
 
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
@@ -101,20 +118,20 @@ ${barContext}`;
       if (!bar) return null;
 
       const happyHour = isHappyHourActive(bar as unknown as Bar, now);
-      const sortedPrices = [...(bar.pint_prices ?? [])].sort((a: any, b: any) => {
+      const sortedPrices = [...(bar.pint_prices ?? [])].sort((a, b) => {
         const aActive = happyHour && a.happy_hour_price_cad ? a.happy_hour_price_cad : a.price_cad;
         const bActive = happyHour && b.happy_hour_price_cad ? b.happy_hour_price_cad : b.price_cad;
         return aActive - bActive;
       });
 
-      const cheapest = sortedPrices[0] as any;
+      const cheapest: DbPintPrice | undefined = sortedPrices[0];
       const activePrice = cheapest
         ? happyHour && cheapest.happy_hour_price_cad
           ? cheapest.happy_hour_price_cad
           : cheapest.price_cad
         : null;
 
-      const vp = bar.vibe_profile as Record<string, any>;
+      const vp = bar.vibe_profile as Record<string, unknown>;
       const firstTag: string | null = (vp?.tags as string[] | undefined)?.[0] ?? null;
 
       return {

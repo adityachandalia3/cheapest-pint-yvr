@@ -111,7 +111,7 @@ function PosterTemplate({ crawl, mapUrl }: { crawl: CrawlResult; mapUrl: string 
 
       {/* Stops */}
       <div style={{ padding: '24px 32px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        {crawl.stops.map((stop, i) => (
+        {crawl.stops.map((stop) => (
           <div
             key={stop.bar.id}
             style={{

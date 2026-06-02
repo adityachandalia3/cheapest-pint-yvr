@@ -11,6 +11,8 @@ const MapSection = dynamic(() => import('./MapSection'), { ssr: false });
 import { Bar, Filters } from '@/lib/types';
 import { enrichBarWithActivePrice } from '@/lib/priceUtils';
 
+const PINT_POUR_SIZES = new Set([14, 15, 16]);
+
 export default function PintMapClient({ initialBars }: { initialBars: Bar[] }) {
   const [bars, setBars] = useState<Bar[]>(initialBars);
   const [now, setNow] = useState(() => new Date());
@@ -58,16 +60,13 @@ export default function PintMapClient({ initialBars }: { initialBars: Bar[] }) {
     return () => window.removeEventListener('pintmap:showBar', handler);
   }, [handleBarCardClick]);
 
-  const HERO_POUR_SIZES = new Set([14, 15, 16]);
-  const PINT_POUR_SIZES = HERO_POUR_SIZES;
-
   const topThreeBars = useMemo(() => {
     return bars
       .map(b => enrichBarWithActivePrice(b, now))
       .filter(b =>
         b.activePrice !== Infinity &&
         b.activePourSize !== null &&
-        HERO_POUR_SIZES.has(b.activePourSize)
+        PINT_POUR_SIZES.has(b.activePourSize)
       )
       .sort((a, b) => a.activePrice - b.activePrice)
       .slice(0, 3);

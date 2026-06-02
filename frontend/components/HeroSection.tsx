@@ -98,6 +98,7 @@ export default function HeroSection({ topBars }: { topBars: BarWithActivePrice[]
         {/* Photo — fixed 220px, crops proportionally */}
         <div className="h-[220px] w-full shrink-0 relative rounded-2xl overflow-hidden bg-[#fde8c4]/60 shadow-lg">
           {photoSrc && (
+            // eslint-disable-next-line @next/next/no-img-element
             <img
               key={photoSrc}
               src={photoSrc}
@@ -175,6 +176,7 @@ export default function HeroSection({ topBars }: { topBars: BarWithActivePrice[]
           <div className="w-[44%] shrink-0">
             <div className="relative w-full aspect-square rounded-2xl overflow-hidden bg-[#fde8c4]/60 shadow-xl">
               {photoSrc && (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   key={photoSrc}
                   src={photoSrc}

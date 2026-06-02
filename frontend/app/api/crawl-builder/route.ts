@@ -15,7 +15,16 @@ interface RawBar {
   neighbourhood: string | null;
   best_known_for: string | null;
   average_rating: number | null;
-  vibe_profile: Record<string, any> | null;
+  vibe_profile: {
+    tags?: string[];
+    best_for?: string[];
+    crowd?: string;
+    energy?: string;
+    price_value?: string;
+    night_arc?: string;
+    avoid_if?: string;
+    [key: string]: unknown;
+  } | null;
   price_entry_count: number | null;
   pint_prices: Array<{
     category: string;

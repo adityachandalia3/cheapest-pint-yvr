@@ -13,8 +13,10 @@ const BEER_TYPES: { value: BeerCategory; label: string }[] = [
   { value: 'cheapest_ipa', label: 'IPA' },
 ];
 
+type BarWithVibe = Bar & { vibe_profile?: { tags?: string[] } | { tags?: string[] }[] | null };
+
 function getVibeTag(bar: Bar): string | null {
-  const vp = (bar as any).vibe_profile;
+  const vp = (bar as BarWithVibe).vibe_profile;
   if (!vp) return null;
   const tags: string[] = Array.isArray(vp) ? (vp[0]?.tags ?? []) : (vp.tags ?? []);
   return tags[0] ?? null;
@@ -147,7 +149,7 @@ export default function BarMapClient({ initialBars }: { initialBars: Bar[] }) {
         )}
 
         <div className="grid grid-cols-3 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
-          {filteredBars.map((bar, idx) => {
+          {filteredBars.map((bar) => {
             const vibeTag = getVibeTag(bar);
             const isHighlighted = bar.id === highlightedBarId;
 

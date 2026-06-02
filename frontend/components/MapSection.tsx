@@ -202,7 +202,7 @@ export default function MapSection({ bars, cheapestBarId, highlightedBarId, hove
                 })}
               </div>
 
-              {selectedBar.happy_hour_start && selectedBar.happy_hour_end && (
+              {selectedBar.happy_hour_windows?.[0] && (
                 <p
                   style={{
                     fontSize: '11px',
@@ -211,8 +211,8 @@ export default function MapSection({ bars, cheapestBarId, highlightedBarId, hove
                   }}
                 >
                   {selectedBar.isHappyHour ? '🎉' : '🕐'} Happy Hour:{' '}
-                  {selectedBar.happy_hour_start.slice(0, 5)} –{' '}
-                  {selectedBar.happy_hour_end.slice(0, 5)}
+                  {selectedBar.happy_hour_windows[0].start_time.slice(0, 5)} –{' '}
+                  {selectedBar.happy_hour_windows[0].end_time.slice(0, 5)}
                 </p>
               )}
 

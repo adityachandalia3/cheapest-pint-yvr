@@ -262,7 +262,7 @@ export default function CrawlOutput({
         {/* Itinerary */}
         <div className="lg:w-1/2 flex flex-col">
           <div className="flex-1 space-y-0">
-            {crawl.stops.map((stop, i) => (
+            {crawl.stops.map((stop) => (
               <StopCard key={stop.bar.id} stop={stop} />
             ))}
           </div>
