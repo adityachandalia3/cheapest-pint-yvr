@@ -40,6 +40,20 @@ export default function AboutPage() {
           </div>
 
           <div>
+            <h2 className="text-xl font-black text-[#1c1917] mb-2">Find Your Vibe</h2>
+            <p>
+              Price isn&apos;t everything. Sometimes you want a loud sports bar, sometimes a quiet craft beer spot, sometimes somewhere with a patio and a good playlist. Find Your Vibe lets you describe the kind of night you&apos;re after in plain English — &quot;lively pub to watch the game with friends&quot; or &quot;chill spot for a first date&quot; — and we&apos;ll match you with bars in Vancouver that actually fit. It&apos;s not a filter dropdown. It&apos;s a recommendation engine that understands what you mean.
+            </p>
+          </div>
+
+          <div>
+            <h2 className="text-xl font-black text-[#1c1917] mb-2">Bar Crawl Builder</h2>
+            <p>
+              Can&apos;t pick just one? The Bar Crawl Builder puts together a multi-stop night out for you — starting somewhere cheap and low-key, building toward a livelier vibe as the evening goes on. Tell it your neighbourhood, how many stops you want, and what kind of crowd you&apos;re after, and it&apos;ll plan the whole thing. You can even export the crawl as a PDF to share with your group before you head out.
+            </p>
+          </div>
+
+          <div>
             <h2 className="text-xl font-black text-[#1c1917] mb-2">How the prices work</h2>
             <p>
               Prices are scraped automatically from bar menus and updated regularly. We also factor in happy hour windows so you know when a place is offering a deal right now versus their regular price. Community submissions help us catch things the scraper misses — if you spot something wrong, you can submit a correction and we&apos;ll review it.
@@ -55,10 +69,22 @@ export default function AboutPage() {
         </div>
 
         {/* CTAs */}
-        <div className="mt-10 flex flex-col sm:flex-row gap-3">
+        <div className="mt-10 flex flex-col sm:flex-row flex-wrap gap-3">
+          <Link
+            href="/?tab=vibe"
+            className="inline-flex items-center justify-center gap-2 bg-[#B34207] hover:bg-[#8f3506] text-white font-black px-6 py-3 rounded-xl transition-all duration-200 text-sm"
+          >
+            ✨ Find Your Vibe
+          </Link>
+          <Link
+            href="/crawl-builder"
+            className="inline-flex items-center justify-center gap-2 bg-[#B34207] hover:bg-[#8f3506] text-white font-black px-6 py-3 rounded-xl transition-all duration-200 text-sm"
+          >
+            🗺️ Plan a Bar Crawl
+          </Link>
           <Link
             href="/advertise"
-            className="inline-flex items-center justify-center gap-2 bg-[#B34207] hover:bg-[#8f3506] text-white font-black px-6 py-3 rounded-xl transition-all duration-200 text-sm"
+            className="inline-flex items-center justify-center gap-2 bg-white hover:bg-[#fef9f0] text-[#B34207] border border-[#B34207] font-black px-6 py-3 rounded-xl transition-all duration-200 text-sm"
           >
             📢 Advertise With Us
           </Link>
