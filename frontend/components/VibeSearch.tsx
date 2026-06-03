@@ -13,12 +13,12 @@ interface VibeResult {
   expense_rating: string | null;
 }
 
-function formatExpenseRating(rating: string): string {
+function formatExpenseRating(rating: string): string | null {
   const lower = rating.toLowerCase();
   if (lower.includes('budget') || lower.includes('cheap') || lower.includes('inexpensive')) return '$ Budget';
   if (lower.includes('moderate') || lower.includes('mid')) return '$$ Moderate';
   if (lower.includes('pricey') || lower.includes('expensive') || lower.includes('premium')) return '$$$ Pricey';
-  return rating;
+  return null;
 }
 
 function formatTag(tag: string): string {
