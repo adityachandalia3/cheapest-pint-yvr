@@ -32,6 +32,7 @@ export default function HeroSection({ topBars }: { topBars: BarWithActivePrice[]
   const [paused, setPaused] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
+  const touchStartX = useRef<number | null>(null);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -104,6 +105,15 @@ export default function HeroSection({ topBars }: { topBars: BarWithActivePrice[]
       <div
         ref={containerRef}
         className="relative w-full overflow-hidden h-[300px] md:h-[460px]"
+        onTouchStart={e => { touchStartX.current = e.touches[0].clientX; }}
+        onTouchEnd={e => {
+          if (touchStartX.current === null) return;
+          const delta = e.changedTouches[0].clientX - touchStartX.current;
+          touchStartX.current = null;
+          if (Math.abs(delta) < 50) return;
+          setPaused(true);
+          setIndex(i => delta < 0 ? (i + 1) % count : (i - 1 + count) % count);
+        }}
       >
         {bars.map((bar, i) => {
           const diff = (i - index + count) % count;
