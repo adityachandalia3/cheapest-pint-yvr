@@ -86,7 +86,9 @@ export async function POST(req: NextRequest) {
 
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 
-  const systemPrompt = `You are a Vancouver bar expert. Based on the user's request and the following bar profiles, recommend the 3 best matching bars. For each bar explain in 2-3 sentences why it matches their vibe tonight. Be conversational, specific, and honest. Reference actual details from the bar profiles like prices, happy hour times, crowd type, and insider tips.
+  const systemPrompt = `You are a Vancouver bar expert. Based on the user's request and the following bar profiles, recommend the 3 best matching bars. For each bar explain in 2-3 sentences why it matches their vibe tonight. Be conversational, specific, and honest. Reference actual details from that bar's own profile only — do NOT mix details from different bars.
+
+CRITICAL: Each bar profile starts with [ID:...]. You must use the exact bar_id from that bar's profile. Only use details (crowd, energy, prices, tips) from that specific bar's profile in its match_reason.
 
 Respond with ONLY valid JSON, no markdown fences:
 [
@@ -99,7 +101,7 @@ Bar profiles:
 ${barContext}`;
 
   const message = await anthropic.messages.create({
-    model: 'claude-sonnet-4-6',
+    model: 'claude-haiku-4-5-20251001',
     max_tokens: 1024,
     system: systemPrompt,
     messages: [{ role: 'user', content: query }],

@@ -52,10 +52,15 @@ export default function VibeSearch({
 
   useEffect(() => {
     if (isOpen) {
-      if (initialQuery) setQuery(initialQuery);
-      setTimeout(() => inputRef.current?.focus(), 80);
+      if (initialQuery) {
+        setQuery(initialQuery);
+        runSearch(initialQuery);
+      } else {
+        setTimeout(() => inputRef.current?.focus(), 80);
+      }
     }
-  }, [isOpen, initialQuery]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -63,8 +68,7 @@ export default function VibeSearch({
     return () => window.removeEventListener('keydown', handler);
   }, [isOpen, onClose]);
 
-  const handleSearch = useCallback(async () => {
-    const q = query.trim();
+  const runSearch = useCallback(async (q: string) => {
     if (!q || loading) return;
     setLoading(true);
     setError(null);
@@ -83,7 +87,9 @@ export default function VibeSearch({
     } finally {
       setLoading(false);
     }
-  }, [query, loading]);
+  }, [loading]);
+
+  const handleSearch = useCallback(() => runSearch(query.trim()), [query, runSearch]);
 
   const handleShowOnMap = (barId: string) => {
     onShowOnMap(barId);
@@ -116,7 +122,6 @@ export default function VibeSearch({
         <div className="overflow-y-auto px-6 py-5 flex-1">
           {/* Search input */}
           <div className="flex items-center gap-3 bg-[#fef9f0] rounded-xl border border-[#fde8c4] focus-within:border-[#B34207]/50 focus-within:shadow-[0_0_0_3px_rgba(179,66,7,0.08)] transition-all duration-300 px-4 py-3">
-            <span className="text-xl flex-shrink-0 select-none">🍺</span>
             <input
               ref={inputRef}
               value={query}

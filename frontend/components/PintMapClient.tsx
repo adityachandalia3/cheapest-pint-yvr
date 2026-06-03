@@ -163,11 +163,11 @@ export default function PintMapClient({ initialBars }: { initialBars: Bar[] }) {
           <div className="flex flex-wrap gap-1.5 mt-2.5">
             {VIBE_CHIPS.map(chip => {
               const label = `${chip.emoji} ${chip.label}`;
-              const active = vibeQuery === label;
+              const active = vibeQuery === chip.label;
               return (
                 <button
                   key={chip.label}
-                  onClick={() => setVibeQuery(active ? '' : label)}
+                  onClick={() => { setVibeQuery(chip.label); setVibeOpen(true); }}
                   className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full border transition-all duration-150"
                   style={active
                     ? { background: '#B34207', color: '#fff', borderColor: '#B34207' }
