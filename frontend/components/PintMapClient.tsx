@@ -160,7 +160,7 @@ export default function PintMapClient({ initialBars }: { initialBars: Bar[] }) {
           </div>
 
           {/* Chips */}
-          <div className="flex flex-wrap gap-2 mt-3">
+          <div className="flex flex-wrap gap-1.5 mt-2.5">
             {VIBE_CHIPS.map(chip => {
               const label = `${chip.emoji} ${chip.label}`;
               const active = vibeQuery === label;
@@ -168,7 +168,7 @@ export default function PintMapClient({ initialBars }: { initialBars: Bar[] }) {
                 <button
                   key={chip.label}
                   onClick={() => setVibeQuery(active ? '' : label)}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border transition-all duration-150"
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full border transition-all duration-150"
                   style={active
                     ? { background: '#B34207', color: '#fff', borderColor: '#B34207' }
                     : { background: '#fef9f0', color: '#78716c', borderColor: '#fde8c4' }
