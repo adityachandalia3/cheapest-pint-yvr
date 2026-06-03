@@ -229,10 +229,6 @@ export default function PintMapClient({ initialBars }: { initialBars: Bar[] }) {
         </a>
       </div>
 
-      <footer className="text-center py-8 text-stone-400 text-xs border-t border-[#fde8c4] mt-4 bg-white">
-        🍺 Pint Map YVR · Vancouver, BC
-      </footer>
-
       <VibeSearch
         isOpen={vibeOpen}
         onClose={() => { setVibeOpen(false); setVibeQuery(''); }}

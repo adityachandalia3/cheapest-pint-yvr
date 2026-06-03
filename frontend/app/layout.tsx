@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import SiteNav from '@/components/SiteNav';
+import SiteFooter from '@/components/SiteFooter';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
@@ -18,6 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <SiteNav />
         {/* pb accounts for the fixed mobile bottom tab bar */}
         <div className="pb-[72px] md:pb-0">{children}</div>
+        <SiteFooter />
       </body>
     </html>
   );
