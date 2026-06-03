@@ -4,6 +4,7 @@ import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import HeroSection from './HeroSection';
 import FilterBar from './FilterBar';
+import VibeSearch, { VIBE_CHIPS } from './VibeSearch';
 
 const Leaderboard = dynamic(() => import('./Leaderboard'), { ssr: false });
 const MapSection = dynamic(() => import('./MapSection'), { ssr: false });
@@ -24,6 +25,8 @@ export default function PintMapClient({ initialBars }: { initialBars: Bar[] }) {
   });
   const [highlightedBarId, setHighlightedBarId] = useState<string | null>(null);
   const [hoveredBarId, setHoveredBarId] = useState<string | null>(null);
+  const [vibeOpen, setVibeOpen] = useState(false);
+  const [vibeQuery, setVibeQuery] = useState('');
 
   const mapRef = useRef<HTMLDivElement>(null);
   const leaderboardRef = useRef<HTMLDivElement>(null);
@@ -125,6 +128,60 @@ export default function PintMapClient({ initialBars }: { initialBars: Bar[] }) {
     <div className="min-h-screen bg-[#fef9f0] text-[#1c1917]" suppressHydrationWarning>
       <HeroSection topBars={topThreeBars} />
 
+      {/* Find Your Vibe inline card */}
+      <div className="px-4 pt-4 pb-1">
+        <div className="bg-white rounded-2xl border border-[#fde8c4] p-4 shadow-sm">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-11 h-11 rounded-xl bg-[#B34207] flex items-center justify-center shrink-0 shadow-md">
+              <span className="text-xl leading-none">✨</span>
+            </div>
+            <div>
+              <h2 className="font-black text-[#1c1917] text-base leading-tight">Find Your Vibe</h2>
+              <p className="text-xs text-[#B34207] mt-0.5">Describe your night, we&apos;ll find the bar</p>
+            </div>
+          </div>
+
+          {/* Search bar */}
+          <div className="flex items-center gap-2 bg-[#fef9f0] border border-[#fde8c4] focus-within:border-[#B34207]/50 rounded-xl px-3 py-2.5 transition-all">
+            <input
+              value={vibeQuery}
+              onChange={e => setVibeQuery(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && vibeQuery.trim()) setVibeOpen(true); }}
+              placeholder="e.g. lively sports bar with cheap pint..."
+              className="flex-1 bg-transparent outline-none text-sm text-[#1c1917] placeholder-stone-400 min-w-0"
+            />
+            <button
+              onClick={() => { if (vibeQuery.trim()) setVibeOpen(true); }}
+              disabled={!vibeQuery.trim()}
+              className="shrink-0 bg-[#1c1917] disabled:opacity-30 text-white font-black text-sm px-4 py-1.5 rounded-lg transition-colors"
+            >
+              Find
+            </button>
+          </div>
+
+          {/* Chips */}
+          <div className="flex flex-wrap gap-2 mt-3">
+            {VIBE_CHIPS.map(chip => {
+              const label = `${chip.emoji} ${chip.label}`;
+              const active = vibeQuery === label;
+              return (
+                <button
+                  key={chip.label}
+                  onClick={() => setVibeQuery(active ? '' : label)}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border transition-all duration-150"
+                  style={active
+                    ? { background: '#B34207', color: '#fff', borderColor: '#B34207' }
+                    : { background: '#fef9f0', color: '#78716c', borderColor: '#fde8c4' }
+                  }
+                >
+                  {chip.emoji} {chip.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
       {/* FilterBar — sticky, sits below top nav on both mobile and desktop */}
       <div className="sticky top-12 md:top-14 z-40">
         <FilterBar
@@ -176,6 +233,16 @@ export default function PintMapClient({ initialBars }: { initialBars: Bar[] }) {
       <footer className="text-center py-8 text-stone-400 text-xs border-t border-[#fde8c4] mt-4 bg-white">
         🍺 Pint Map YVR · Vancouver, BC
       </footer>
+
+      <VibeSearch
+        isOpen={vibeOpen}
+        onClose={() => setVibeOpen(false)}
+        initialQuery={vibeQuery}
+        onShowOnMap={barId => {
+          setVibeOpen(false);
+          handleBarCardClick(barId);
+        }}
+      />
     </div>
   );
 }

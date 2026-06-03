@@ -25,14 +25,26 @@ function formatTag(tag: string): string {
   return tag.replace(/_/g, ' ');
 }
 
+const VIBE_CHIPS = [
+  { emoji: '🍺', label: 'Cheap pregame before Granville' },
+  { emoji: '📺', label: 'Loud sports bar for the match tonight' },
+  { emoji: '💫', label: 'Cozy first date, not too loud' },
+  { emoji: '💎', label: 'Hidden local gem, no tourists' },
+  { emoji: '🌿', label: 'Sunny patio, relaxed afternoon' },
+];
+
+export { VIBE_CHIPS };
+
 export default function VibeSearch({
   isOpen,
   onClose,
   onShowOnMap,
+  initialQuery,
 }: {
   isOpen: boolean;
   onClose: () => void;
   onShowOnMap: (barId: string) => void;
+  initialQuery?: string;
 }) {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
@@ -40,17 +52,12 @@ export default function VibeSearch({
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const CHIPS = [
-    { emoji: '🍺', label: 'Cheap pregame before Granville' },
-    { emoji: '📺', label: 'Loud sports bar for the match tonight' },
-    { emoji: '💫', label: 'Cozy first date, not too loud' },
-    { emoji: '💎', label: 'Hidden local gem, no tourists' },
-    { emoji: '🌿', label: 'Sunny patio, relaxed afternoon' },
-  ];
-
   useEffect(() => {
-    if (isOpen) setTimeout(() => inputRef.current?.focus(), 80);
-  }, [isOpen]);
+    if (isOpen) {
+      if (initialQuery) setQuery(initialQuery);
+      setTimeout(() => inputRef.current?.focus(), 80);
+    }
+  }, [isOpen, initialQuery]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -136,7 +143,7 @@ export default function VibeSearch({
 
           {/* Suggestion chips */}
           <div className="flex flex-wrap gap-2 mt-3">
-            {CHIPS.map(chip => {
+            {VIBE_CHIPS.map(chip => {
               const active = query === `${chip.emoji} ${chip.label}`;
               return (
                 <button
