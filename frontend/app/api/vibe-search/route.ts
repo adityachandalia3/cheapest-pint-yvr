@@ -149,13 +149,10 @@ ${barContext}`;
     })
     .filter(Boolean);
 
-  // At most 1 bar without price data in results
-  let noPriceCount = 0;
-  const filtered = enriched.filter(r => {
-    if (r!.cheapest_price != null) return true;
-    noPriceCount++;
-    return noPriceCount <= 1;
-  });
+  // Ensure at most 1 bar without price data — sort priced bars first, then cap
+  const withPrice = enriched.filter(r => r!.cheapest_price != null);
+  const withoutPrice = enriched.filter(r => r!.cheapest_price == null).slice(0, 1);
+  const filtered = [...withPrice, ...withoutPrice].slice(0, 3);
 
   const result = { recommendations: filtered };
   cache.set(cacheKey, { data: result, expiresAt: Date.now() + 30 * 60 * 1000 });

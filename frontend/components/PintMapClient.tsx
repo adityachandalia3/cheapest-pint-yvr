@@ -162,7 +162,6 @@ export default function PintMapClient({ initialBars }: { initialBars: Bar[] }) {
           {/* Chips */}
           <div className="flex flex-wrap gap-1.5 mt-2.5">
             {VIBE_CHIPS.map(chip => {
-              const label = `${chip.emoji} ${chip.label}`;
               const active = vibeQuery === chip.label;
               return (
                 <button
