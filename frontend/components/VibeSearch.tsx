@@ -27,10 +27,8 @@ function formatTag(tag: string): string {
 
 const VIBE_CHIPS = [
   { emoji: '🍺', label: 'Cheap pregame before Granville' },
-  { emoji: '📺', label: 'Loud sports bar for the match tonight' },
   { emoji: '💫', label: 'Cozy first date, not too loud' },
   { emoji: '💎', label: 'Hidden local gem, no tourists' },
-  { emoji: '🌿', label: 'Sunny patio, relaxed afternoon' },
 ];
 
 export { VIBE_CHIPS };
