@@ -3,7 +3,7 @@ export interface PintPrice {
   bar_id: string;
   category: 'cheapest_beer' | 'cheapest_lager' | 'cheapest_ipa';
   beer_name: string | null;
-  price_cad: number;
+  price_cad: number | null;
   happy_hour_price_cad: number | null;
   pour_size_oz: number | null;
 }

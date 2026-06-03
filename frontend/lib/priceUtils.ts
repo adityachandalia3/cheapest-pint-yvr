@@ -39,11 +39,12 @@ export function isHappyHourActive(bar: Bar, now?: Date): boolean {
 }
 
 export function getActivePriceForPint(bar: Bar, pint: PintPrice, now?: Date): number {
-  const regular = Number(pint.price_cad);
+  const regular = pint.price_cad !== null ? Number(pint.price_cad) : null;
   if (pint.happy_hour_price_cad !== null && isHappyHourActive(bar, now)) {
-    return Math.min(regular, Number(pint.happy_hour_price_cad));
+    const hh = Number(pint.happy_hour_price_cad);
+    return regular !== null ? Math.min(regular, hh) : hh;
   }
-  return regular;
+  return regular ?? Infinity;
 }
 
 export function formatPourSize(size: number | null): string | null {
