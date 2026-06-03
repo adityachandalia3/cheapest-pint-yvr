@@ -18,8 +18,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={`${inter.variable} font-sans antialiased bg-[#fef9f0]`}>
         <SiteNav />
         {/* pb accounts for the fixed mobile bottom tab bar */}
-        <div className="pb-[72px] md:pb-0">{children}</div>
-        <SiteFooter />
+        <div className="pb-[72px] md:pb-0">
+          {children}
+          <SiteFooter />
+        </div>
       </body>
     </html>
   );
