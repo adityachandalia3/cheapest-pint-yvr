@@ -40,6 +40,14 @@ export default function VibeSearch({
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const CHIPS = [
+    { emoji: '🍺', label: 'Cheap pregame before Granville' },
+    { emoji: '📺', label: 'Loud sports bar for the match tonight' },
+    { emoji: '💫', label: 'Cozy first date, not too loud' },
+    { emoji: '💎', label: 'Hidden local gem, no tourists' },
+    { emoji: '🌿', label: 'Sunny patio, relaxed afternoon' },
+  ];
+
   useEffect(() => {
     if (isOpen) setTimeout(() => inputRef.current?.focus(), 80);
   }, [isOpen]);
@@ -124,6 +132,30 @@ export default function VibeSearch({
                 </span>
               ) : 'Find My Bar'}
             </button>
+          </div>
+
+          {/* Suggestion chips */}
+          <div className="flex flex-wrap gap-2 mt-3">
+            {CHIPS.map(chip => {
+              const active = query === `${chip.emoji} ${chip.label}`;
+              return (
+                <button
+                  key={chip.label}
+                  onClick={() => {
+                    setQuery(`${chip.emoji} ${chip.label}`);
+                    inputRef.current?.focus();
+                  }}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border transition-all duration-200"
+                  style={active
+                    ? { background: '#B34207', color: '#fff', borderColor: '#B34207' }
+                    : { background: '#fef9f0', color: '#78716c', borderColor: '#fde8c4' }
+                  }
+                >
+                  <span>{chip.emoji}</span>
+                  <span>{chip.label}</span>
+                </button>
+              );
+            })}
           </div>
 
           {loading && (
