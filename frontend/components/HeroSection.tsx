@@ -10,7 +10,7 @@ const MEDALS = [
   { rank: 3, emoji: '🥉', badge: 'bg-orange-100 text-orange-700 border-orange-300' },
 ];
 
-const ROTATE_MS = 2000;
+const ROTATE_MS = 4000;
 const SCALE_SIDE = 0.85;
 const PEEK_MOBILE = 60;
 const PEEK_DESKTOP = 160;
