@@ -147,7 +147,15 @@ ${barContext}`;
     })
     .filter(Boolean);
 
-  const result = { recommendations: enriched };
+  // At most 1 bar without price data in results
+  let noPriceCount = 0;
+  const filtered = enriched.filter(r => {
+    if (r!.cheapest_price != null) return true;
+    noPriceCount++;
+    return noPriceCount <= 1;
+  });
+
+  const result = { recommendations: filtered };
   cache.set(cacheKey, { data: result, expiresAt: Date.now() + 30 * 60 * 1000 });
 
   return NextResponse.json(result);
