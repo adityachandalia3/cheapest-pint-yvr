@@ -235,7 +235,7 @@ export default function PintMapClient({ initialBars }: { initialBars: Bar[] }) {
 
       <VibeSearch
         isOpen={vibeOpen}
-        onClose={() => setVibeOpen(false)}
+        onClose={() => { setVibeOpen(false); setVibeQuery(''); }}
         initialQuery={vibeQuery}
         onShowOnMap={barId => {
           setVibeOpen(false);
