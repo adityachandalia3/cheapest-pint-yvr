@@ -65,7 +65,7 @@ export default function PintMapClient({ initialBars }: { initialBars: Bar[] }) {
 
   const topThreeBars = useMemo(() => {
     return bars
-      .map(b => enrichBarWithActivePrice(b, now))
+      .map(b => enrichBarWithActivePrice(b, now, 'cheapest_beer'))
       .filter(b =>
         b.activePrice !== Infinity &&
         b.activePourSize !== null &&
