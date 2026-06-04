@@ -150,7 +150,7 @@ export default function MapSection({ bars, cheapestBarId, highlightedBarId, hove
       {showResetView && map && (
         <button
           onClick={() => { map.setCenter(VANCOUVER_CENTER); map.setZoom(DEFAULT_ZOOM); }}
-          className="absolute bottom-3 left-3 z-10 bg-white text-[#1c1917] text-xs font-black px-3 py-1.5 rounded-full shadow-md border border-[#fde8c4] hover:border-[#B34207]/40 transition-colors"
+          className="absolute top-3 left-3 z-10 bg-white text-[#1c1917] text-xs font-black px-3 py-1.5 rounded-full shadow-md border border-[#fde8c4] hover:border-[#B34207]/40 transition-colors"
         >
           Reset View
         </button>
