@@ -5,6 +5,10 @@ import type { CrawlResult, CrawlStop } from '@/app/api/crawl-builder/route';
 
 // ─── Static map URL ───────────────────────────────────────────────────────────
 
+function proxiedMapUrl(url: string): string {
+  return `/api/proxy-map?url=${encodeURIComponent(url)}`;
+}
+
 function staticMapUrl(stops: CrawlStop[]): string {
   const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!;
   const valid = stops.filter(s => s.bar.latitude && s.bar.longitude);
@@ -113,7 +117,6 @@ function PosterTemplate({ crawl, mapUrl }: { crawl: CrawlResult; mapUrl: string 
           src={mapUrl}
           alt="Crawl map"
           style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-          crossOrigin="anonymous"
         />
         {/* Bottom fade to blend into stop cards */}
         <div style={{
@@ -277,7 +280,7 @@ function PosterTemplate({ crawl, mapUrl }: { crawl: CrawlResult; mapUrl: string 
 export default function CrawlPDFExport({ crawl }: { crawl: CrawlResult }) {
   const [loading, setLoading] = useState(false);
   const posterRef = useRef<HTMLDivElement>(null);
-  const mapUrl = staticMapUrl(crawl.stops);
+  const mapUrl = proxiedMapUrl(staticMapUrl(crawl.stops));
 
   async function handleDownload() {
     if (loading || !posterRef.current) return;

@@ -52,7 +52,7 @@ export default function CrawlBuilderClient({
   bars: BarOption[];
   neighbourhoods: string[];
 }) {
-  const [mode, setMode] = useState<'bar' | 'neighbourhood'>('neighbourhood');
+  const [mode, setMode] = useState<'bar' | 'neighbourhood'>('bar');
 
   // Option A
   const [barSearch, setBarSearch] = useState('');

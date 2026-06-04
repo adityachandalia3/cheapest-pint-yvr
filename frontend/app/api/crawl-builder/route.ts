@@ -175,7 +175,15 @@ function scoreBar(
   return { score, price, hh };
 }
 
-const MAX_RADIUS_KM = 0.75; // hard cap — all stops must stay within this radius of the crawl centroid
+const MAX_RADIUS_KM = 0.75; // all stops stay within this radius of the crawl centroid
+const MAX_LEG_KM = 0.65;    // max walk between any two consecutive stops (~8 min)
+
+// Maps display neighbourhood names back to the DB values they cover
+function dbNeighbourhoods(display: string): string[] {
+  if (display === 'Central')       return ['Downtown', 'Central'];
+  if (display === 'East Vancouver') return ['East Vancouver', 'Strathcona', 'Chinatown'];
+  return [display];
+}
 
 function centroid(bars: RawBar[]): { lat: number; lng: number } | null {
   const valid = bars.filter(b => b.latitude && b.longitude);
@@ -222,8 +230,20 @@ function buildCrawl(
       : remaining;
     const radiusCandidates = radiusPool.length >= 1 ? radiusPool : remaining;
 
+    // Per-leg distance cap from previous stop
+    const lastStop = stops.length > 0 ? stops[stops.length - 1].bar : null;
+    const legPool = lastStop?.latitude && lastStop?.longitude
+      ? (() => {
+          const withinLeg = radiusCandidates.filter(b =>
+            b.latitude && b.longitude &&
+            haversineKm(lastStop.latitude!, lastStop.longitude!, b.latitude, b.longitude) <= MAX_LEG_KM
+          );
+          return withinLeg.length >= 1 ? withinLeg : radiusCandidates;
+        })()
+      : radiusCandidates;
+
     // Apply budget and happy-hour filters; fall back softly if empty
-    const filtered = radiusCandidates.filter(b => {
+    const filtered = legPool.filter(b => {
       if (happyHourOnly && !isHappyHour(b, arrivalTime, day)) return false;
       if (maxPricePerStop < Infinity) {
         const bHh = isHappyHour(b, arrivalTime, day);
@@ -232,7 +252,7 @@ function buildCrawl(
       }
       return true;
     });
-    const pool = filtered.length >= 1 ? filtered : radiusCandidates;
+    const pool = filtered.length >= 1 ? filtered : legPool;
 
     if (stops.length === 0) {
       const scored = pool.map(b => ({ bar: b, ...scoreBar(b, arrivalTime, day, selectedBars, vibe) }));
@@ -425,7 +445,7 @@ export async function POST(req: NextRequest) {
     .from('bars')
     .select(SELECT_FIELDS)
     .eq('is_permanently_closed', false)
-    .eq('neighbourhood', neighbourhood!)
+    .in('neighbourhood', dbNeighbourhoods(neighbourhood!))
     .not('latitude', 'is', null)
     .not('longitude', 'is', null);
 

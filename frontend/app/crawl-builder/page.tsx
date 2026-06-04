@@ -25,7 +25,18 @@ export default async function CrawlBuilderPage() {
     .not('latitude', 'is', null)
     .not('longitude', 'is', null);
 
-  const bars: BarOption[] = (data ?? []) as BarOption[];
+  const rawBars: BarOption[] = (data ?? []) as BarOption[];
+
+  // Normalise neighbourhood names for display
+  const HOOD_MAP: Record<string, string> = {
+    Downtown:   'Central',
+    Strathcona: 'East Vancouver',
+    Chinatown:  'East Vancouver',
+  };
+  const bars = rawBars.map(b => ({
+    ...b,
+    neighbourhood: b.neighbourhood ? (HOOD_MAP[b.neighbourhood] ?? b.neighbourhood) : null,
+  }));
 
   // Neighbourhoods with >3 bars for Option B dropdown
   const counts: Record<string, number> = {};
