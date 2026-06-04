@@ -135,6 +135,7 @@ export default function BarMapClient({ initialBars }: { initialBars: Bar[] }) {
           hoveredBarId={hoveredBarId}
           onBarSelect={handleMapPinClick}
           className="w-full h-[280px] md:h-[480px]"
+          showResetView
         />
       </div>
 
@@ -215,9 +216,6 @@ export default function BarMapClient({ initialBars }: { initialBars: Bar[] }) {
         </div>
       </section>
 
-      <footer className="text-center py-8 text-stone-400 text-xs border-t border-[#fde8c4] mt-4 bg-white">
-        🍺 Pint Map YVR · Vancouver, BC
-      </footer>
     </div>
   );
 }

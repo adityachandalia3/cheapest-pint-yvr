@@ -13,9 +13,27 @@ interface Props {
   ranks?: Record<string, number>; // barId → rank (1-based); when set, uses numbered circle pins
   onBarSelect: (id: string | null) => void;
   className?: string;
+  showResetView?: boolean;
 }
 
 const VANCOUVER_CENTER = { lat: 49.2827, lng: -123.1207 };
+const DEFAULT_ZOOM = 13;
+const MAX_RADIUS_KM = 15;
+
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function isWithin15km(bar: BarWithActivePrice): boolean {
+  if (!bar.latitude || !bar.longitude) return false;
+  return haversineKm(VANCOUVER_CENTER.lat, VANCOUVER_CENTER.lng, bar.latitude, bar.longitude) <= MAX_RADIUS_KM;
+}
 const MAP_CONTAINER_STYLE = { width: '100%', height: '100%' };
 
 const MAP_STYLES = [
@@ -40,7 +58,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   cheapest_ipa: '🟡 IPA',
 };
 
-export default function MapSection({ bars, cheapestBarId, highlightedBarId, hoveredBarId, ranks, onBarSelect, className }: Props) {
+export default function MapSection({ bars, cheapestBarId, highlightedBarId, hoveredBarId, ranks, onBarSelect, className, showResetView }: Props) {
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '',
@@ -128,11 +146,19 @@ export default function MapSection({ bars, cheapestBarId, highlightedBarId, hove
   }
 
   return (
-    <div className={sizeClass}>
+    <div className={`${sizeClass} relative`}>
+      {showResetView && map && (
+        <button
+          onClick={() => { map.setCenter(VANCOUVER_CENTER); map.setZoom(DEFAULT_ZOOM); }}
+          className="absolute bottom-3 right-3 z-10 bg-white text-[#1c1917] text-xs font-black px-3 py-1.5 rounded-full shadow-md border border-[#fde8c4] hover:border-[#B34207]/40 transition-colors"
+        >
+          Reset View
+        </button>
+      )}
       <GoogleMap
         mapContainerStyle={MAP_CONTAINER_STYLE}
         center={VANCOUVER_CENTER}
-        zoom={12}
+        zoom={DEFAULT_ZOOM}
         options={{ disableDefaultUI: true, zoomControl: true, styles: MAP_STYLES }}
         onLoad={onLoad}
         onUnmount={onUnmount}
