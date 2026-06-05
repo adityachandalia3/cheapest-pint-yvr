@@ -49,6 +49,12 @@ export default function HeroSection({
   const touchStartX = useRef<number | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pendingTime, setPendingTime] = useState(simulatedTime ?? '');
+  const [timeError, setTimeError] = useState('');
+
+  function isValidBarTime(t: string): boolean {
+    const h = parseInt(t.split(':')[0], 10);
+    return h >= 11 || h <= 2; // 11 AM → 2 AM
+  }
   const pickerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -166,16 +172,20 @@ export default function HeroSection({
                   <input
                     type="time"
                     value={pendingTime}
-                    onChange={e => setPendingTime(e.target.value)}
+                    onChange={e => { setPendingTime(e.target.value); setTimeError(''); }}
                     className="flex-1 text-xs border border-[#fde8c4] rounded-lg px-2 py-1.5 outline-none focus:border-[#B34207]/50 text-[#1c1917] bg-[#fef9f0]"
                   />
                   <button
                     onMouseDown={e => {
                       e.preventDefault();
-                      if (pendingTime) {
-                        onTimeChange?.(pendingTime);
-                        setPickerOpen(false);
+                      if (!pendingTime) return;
+                      if (!isValidBarTime(pendingTime)) {
+                        setTimeError('11 AM – 2 AM only');
+                        return;
                       }
+                      onTimeChange?.(pendingTime);
+                      setPickerOpen(false);
+                      setTimeError('');
                     }}
                     disabled={!pendingTime}
                     className="text-[11px] font-black px-2.5 py-1.5 bg-[#B34207] text-white rounded-lg disabled:opacity-30 transition-opacity"
@@ -183,6 +193,9 @@ export default function HeroSection({
                     Set
                   </button>
                 </div>
+                {timeError && (
+                  <p className="text-[9px] text-red-500 font-semibold mt-1">{timeError}</p>
+                )}
               </div>
             </div>
           )}

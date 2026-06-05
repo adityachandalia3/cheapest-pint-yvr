@@ -1,11 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import dynamic from 'next/dynamic';
 import { GoogleMap, DirectionsRenderer, useJsApiLoader } from '@react-google-maps/api';
 import type { CrawlResult, CrawlStop } from '@/app/api/crawl-builder/route';
 
-const CrawlPDFExport = dynamic(() => import('./CrawlPDFExport'), { ssr: false });
+export type { CrawlResult, CrawlStop };
 
 // ─── Map styles — light/warm ──────────────────────────────────────────────────
 
@@ -38,7 +37,7 @@ function pinUrl(num: number, highlight = false): string {
 
 // ─── Map component ────────────────────────────────────────────────────────────
 
-function CrawlMap({ stops }: { stops: CrawlStop[] }) {
+export function CrawlMap({ stops }: { stops: CrawlStop[] }) {
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '',
@@ -162,7 +161,7 @@ function CustomMarker({
 
 // ─── Itinerary ────────────────────────────────────────────────────────────────
 
-function StopCard({ stop }: { stop: CrawlStop }) {
+export function StopCard({ stop }: { stop: CrawlStop }) {
   return (
     <div className="relative">
       {stop.position > 1 && stop.walking_minutes_from_prev != null && (
@@ -227,6 +226,63 @@ export default function CrawlOutput({
   crawl: CrawlResult;
   onRebuild: () => void;
 }) {
+  const [shareState, setShareState] = useState<'idle' | 'saving' | 'copied'>('idle');
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showDropdown) return;
+    function handleClick(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [showDropdown]);
+
+  const shareText = `Join my crawl tonight! I built it on Pint Map YVR — ${crawl.title}, ${crawl.stops.length} stop${crawl.stops.length !== 1 ? 's' : ''} starting at ${crawl.stops[0]?.bar.name}. Check it out 🍺`;
+
+  async function handleShare() {
+    setShareState('saving');
+    try {
+      // Save crawl and get shareable URL (deduplicate: reuse if already saved)
+      let url = shareUrl;
+      if (!url) {
+        const res = await fetch('/api/save-crawl', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ crawl }),
+        });
+        const { id } = await res.json();
+        url = `${window.location.origin}/crawl/${id}`;
+        setShareUrl(url);
+      }
+
+      // Mobile: native share sheet
+      if (navigator.share) {
+        await navigator.share({ title: 'My Pint Map YVR Crawl', text: shareText, url });
+        setShareState('idle');
+        return;
+      }
+
+      // Desktop: show dropdown
+      setShareState('idle');
+      setShowDropdown(true);
+    } catch {
+      setShareState('idle');
+    }
+  }
+
+  async function copyLink() {
+    if (!shareUrl) return;
+    await navigator.clipboard.writeText(shareUrl);
+    setShareState('copied');
+    setShowDropdown(false);
+    setTimeout(() => setShareState('idle'), 2500);
+  }
+
   const priceStops = crawl.stops.filter(s => s.active_price != null);
   const totalHours = Math.floor(crawl.total_duration_min / 60);
   const totalMins = crawl.total_duration_min % 60;
@@ -241,8 +297,49 @@ export default function CrawlOutput({
             {crawl.stops.length} stops · {totalHours > 0 ? `${totalHours}h ` : ''}{totalMins > 0 ? `${totalMins}m` : ''} · {crawl.total_walking_km} km on foot
           </p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <CrawlPDFExport crawl={crawl} />
+        <div className="flex items-center gap-2 shrink-0 flex-wrap">
+          {/* Share button + desktop dropdown */}
+          <div className="relative" ref={dropdownRef}>
+            <button
+              onClick={handleShare}
+              disabled={shareState === 'saving'}
+              className={`text-xs font-black px-3 py-1.5 rounded-lg border transition-all ${
+                shareState === 'copied'
+                  ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
+                  : 'bg-[#fef9f0] border-[#fde8c4] text-[#B34207] hover:border-[#B34207]/50'
+              } disabled:opacity-50`}
+            >
+              {shareState === 'saving' ? '⏳ Saving...' : shareState === 'copied' ? '✓ Copied!' : '🔗 Share'}
+            </button>
+
+            {showDropdown && shareUrl && (
+              <div className="absolute right-0 top-full mt-1.5 w-52 bg-white border border-[#fde8c4] rounded-xl shadow-lg z-50 overflow-hidden">
+                <button
+                  onClick={copyLink}
+                  className="w-full text-left px-4 py-2.5 text-xs font-bold text-[#1c1917] hover:bg-[#fef9f0] transition-colors flex items-center gap-2"
+                >
+                  📋 Copy Link
+                </button>
+                <a
+                  href={`https://wa.me/?text=${encodeURIComponent(shareText + '\n' + shareUrl)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setShowDropdown(false)}
+                  className="w-full block px-4 py-2.5 text-xs font-bold text-[#1c1917] hover:bg-[#fef9f0] transition-colors flex items-center gap-2"
+                >
+                  💬 Share on WhatsApp
+                </a>
+                <a
+                  href={`mailto:?subject=${encodeURIComponent('My Pint Map YVR Crawl')}&body=${encodeURIComponent(shareText + '\n' + shareUrl)}`}
+                  onClick={() => setShowDropdown(false)}
+                  className="w-full block px-4 py-2.5 text-xs font-bold text-[#1c1917] hover:bg-[#fef9f0] transition-colors flex items-center gap-2"
+                >
+                  ✉️ Share via Email
+                </a>
+              </div>
+            )}
+          </div>
+
           <button
             onClick={onRebuild}
             className="text-xs text-stone-500 hover:text-[#B34207] border border-[#fde8c4] hover:border-[#B34207]/40 px-3 py-1.5 rounded-lg transition-all font-semibold"
