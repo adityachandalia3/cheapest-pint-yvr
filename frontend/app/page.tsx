@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import PintMapClient from '@/components/PintMapClient';
+import CommunityPopup from '@/components/CommunityPopup';
 import { Bar } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -32,5 +33,10 @@ export default async function Home() {
     console.error('Supabase error:', error.message);
   }
 
-  return <PintMapClient initialBars={(data ?? []) as Bar[]} />;
+  return (
+    <>
+      <PintMapClient initialBars={(data ?? []) as Bar[]} />
+      <CommunityPopup />
+    </>
+  );
 }

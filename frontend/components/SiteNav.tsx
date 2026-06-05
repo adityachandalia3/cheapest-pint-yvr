@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { IconBeer } from '@tabler/icons-react';
 import VibeSearch from './VibeSearch';
 import MyNightDrawer from './MyNightDrawer';
+import CommunityPopup from './CommunityPopup';
 import { useMyNightContext } from '@/lib/myNightContext';
 
 const NAV_LINKS = [
@@ -30,6 +31,7 @@ export default function SiteNav() {
   const [moreOpen, setMoreOpen] = useState(false);
   const [desktopMoreOpen, setDesktopMoreOpen] = useState(false);
   const [myPicksOpen, setMyPicksOpen] = useState(false);
+  const [communityOpen, setCommunityOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const { myNight, addBar } = useMyNightContext();
@@ -118,6 +120,14 @@ export default function SiteNav() {
             </button>
             {desktopMoreOpen && (
               <div className="absolute right-0 top-full mt-1 w-52 bg-white rounded-xl border border-[#e8dcc8] shadow-lg shadow-black/10 overflow-hidden z-[100]">
+                {/* Join the Community — always first */}
+                <button
+                  onClick={() => { setDesktopMoreOpen(false); setCommunityOpen(true); }}
+                  className="w-full flex items-center gap-2 px-4 py-3 text-[#B34207] text-sm font-semibold hover:bg-[#fef9f0] transition-colors border-b border-[#fde8c4]/60 text-left"
+                >
+                  <span>🍺</span>
+                  Join the Community
+                </button>
                 {NAV_LINKS.map(link => link.comingSoon ? (
                   <div
                     key="world-cup"
@@ -234,6 +244,14 @@ export default function SiteNav() {
           >
             <div className="w-10 h-1 bg-stone-200 rounded-full mx-auto mt-3 mb-4" />
             <p className="text-xs font-black text-stone-400 uppercase tracking-widest px-6 mb-2">Menu</p>
+            {/* Join the Community — always first */}
+            <button
+              onClick={() => { setMoreOpen(false); setCommunityOpen(true); }}
+              className="w-full flex items-center gap-2.5 px-6 py-3.5 text-[#B34207] text-sm font-semibold hover:bg-[#fef9f0] transition-colors border-b border-[#fde8c4]/60 text-left"
+            >
+              <span>🍺</span>
+              Join the Community
+            </button>
             {NAV_LINKS.map(link => link.comingSoon ? (
               <div
                 key="world-cup"
@@ -272,6 +290,11 @@ export default function SiteNav() {
 
       {/* ── My Picks Drawer ─────────────────────────────────────────────── */}
       <MyNightDrawer isOpen={myPicksOpen} onClose={() => setMyPicksOpen(false)} />
+
+      {/* ── Community Popup (manual trigger from menu) ──────────────────── */}
+      {communityOpen && (
+        <CommunityPopup manualOpen onClose={() => setCommunityOpen(false)} />
+      )}
     </>
   );
 }
