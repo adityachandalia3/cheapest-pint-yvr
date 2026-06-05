@@ -3,7 +3,7 @@ import Link from 'next/link';
 export default function SiteFooter() {
   return (
     <footer className="text-center py-8 border-t border-[#fde8c4] mt-4 bg-white">
-      <p className="text-stone-400 text-xs mb-3">🍺 Pint Map YVR · Vancouver, BC</p>
+      <p className="text-stone-400 text-xs mb-3">🍺 Brewscanner · Vancouver, BC</p>
       <nav className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5">
         <Link href="/terms" className="text-[11px] text-stone-400 hover:text-[#B34207] transition-colors">
           Terms &amp; Conditions

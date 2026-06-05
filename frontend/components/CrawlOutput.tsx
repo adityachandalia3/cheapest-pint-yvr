@@ -242,7 +242,7 @@ export default function CrawlOutput({
     return () => document.removeEventListener('mousedown', handleClick);
   }, [showDropdown]);
 
-  const shareText = `Join my crawl tonight! I built it on Pint Map YVR — ${crawl.title}, ${crawl.stops.length} stop${crawl.stops.length !== 1 ? 's' : ''} starting at ${crawl.stops[0]?.bar.name}. Check it out 🍺`;
+  const shareText = `Join my crawl tonight! I built it on Brewscanner — ${crawl.title}. Check it out 🍺 getbrewscanner.com`;
 
   async function handleShare() {
     setShareState('saving');
@@ -262,7 +262,7 @@ export default function CrawlOutput({
 
       // Mobile: native share sheet
       if (navigator.share) {
-        await navigator.share({ title: 'My Pint Map YVR Crawl', text: shareText, url });
+        await navigator.share({ title: 'My Brewscanner Crawl', text: shareText, url });
         setShareState('idle');
         return;
       }
@@ -330,7 +330,7 @@ export default function CrawlOutput({
                   💬 Share on WhatsApp
                 </a>
                 <a
-                  href={`mailto:?subject=${encodeURIComponent('My Pint Map YVR Crawl')}&body=${encodeURIComponent(shareText + '\n' + shareUrl)}`}
+                  href={`mailto:?subject=${encodeURIComponent('My Brewscanner Crawl')}&body=${encodeURIComponent(shareText + '\n' + shareUrl)}`}
                   onClick={() => setShowDropdown(false)}
                   className="w-full block px-4 py-2.5 text-xs font-bold text-[#1c1917] hover:bg-[#fef9f0] transition-colors flex items-center gap-2"
                 >

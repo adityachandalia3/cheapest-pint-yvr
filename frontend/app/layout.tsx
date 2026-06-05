@@ -8,9 +8,13 @@ import AppProviders from '@/components/AppProviders';
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
 export const metadata: Metadata = {
-  title: 'Pint Map YVR — Cheapest Beer in Vancouver',
+  title: 'Brewscanner — Find the Cheapest Pint in Vancouver',
   description:
-    'Find the cheapest pint of beer in Vancouver, BC. Real-time prices from bars and pubs across the city.',
+    'Brewscanner — Find the Cheapest Pint in Vancouver. Real beer prices across 100+ bars.',
+  openGraph: {
+    title: 'Brewscanner — Find the Cheapest Pint in Vancouver',
+    description: 'Brewscanner — Find the Cheapest Pint in Vancouver. Real beer prices across 100+ bars.',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

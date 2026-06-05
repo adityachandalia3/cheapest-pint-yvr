@@ -18,14 +18,14 @@ export async function POST(req: Request) {
 
   try {
     await resend.emails.send({
-      from: 'Pint Map YVR <onboarding@resend.dev>',
+      from: 'Brewscanner <onboarding@resend.dev>',
       to,
       replyTo: email,
       subject: `Advertising Inquiry from ${name}${company ? ` · ${company}` : ''}`,
       html: `
         <div style="font-family: sans-serif; max-width: 600px; padding: 24px;">
           <h2 style="color: #B34207; margin-bottom: 4px;">New Advertising Inquiry</h2>
-          <p style="color: #888; font-size: 13px; margin-bottom: 24px;">Submitted via Pint Map YVR</p>
+          <p style="color: #888; font-size: 13px; margin-bottom: 24px;">Submitted via Brewscanner</p>
           <table style="width: 100%; border-collapse: collapse;">
             <tr><td style="padding: 8px 0; color: #555; font-size: 13px; width: 120px;">Name</td><td style="padding: 8px 0; font-weight: 600;">${name}</td></tr>
             <tr><td style="padding: 8px 0; color: #555; font-size: 13px;">Email</td><td style="padding: 8px 0; font-weight: 600;">${email}</td></tr>

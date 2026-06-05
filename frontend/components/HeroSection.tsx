@@ -324,9 +324,9 @@ export default function HeroSection({
                       className="inline-flex items-center gap-1.5 font-black text-xs px-3 py-1.5 rounded-full bg-white/20 hover:bg-white/30 text-white border border-white/30 backdrop-blur-sm transition-colors whitespace-nowrap"
                       onClick={async e => {
                         e.stopPropagation();
-                        const shareText = `Found a $${bar.activePrice.toFixed(2)} pint in Vancouver 🍺 ${getDisplayName(bar.name)}${bar.neighbourhood ? ', ' + bar.neighbourhood : ''}. You're welcome. pintmapyvr.com`;
+                        const shareText = `Found a $${bar.activePrice.toFixed(2)} pint in Vancouver 🍺 ${getDisplayName(bar.name)}${bar.neighbourhood ? ', ' + bar.neighbourhood : ''}. You're welcome. getbrewscanner.com`;
                         if (navigator.share) {
-                          await navigator.share({ title: 'Cheapest Pint in Vancouver Right Now', text: shareText, url: 'https://pintmapyvr.com' });
+                          await navigator.share({ title: 'Cheapest Pint in Vancouver Right Now', text: shareText, url: 'https://getbrewscanner.com' });
                         } else {
                           setShareOpenIdx(shareOpenIdx === i ? null : i);
                         }
@@ -346,13 +346,13 @@ export default function HeroSection({
                   onClick={e => e.stopPropagation()}
                 >
                   {(() => {
-                    const shareText = `Found a $${bar.activePrice.toFixed(2)} pint in Vancouver 🍺 ${getDisplayName(bar.name)}${bar.neighbourhood ? ', ' + bar.neighbourhood : ''}. You're welcome. pintmapyvr.com`;
+                    const shareText = `Found a $${bar.activePrice.toFixed(2)} pint in Vancouver 🍺 ${getDisplayName(bar.name)}${bar.neighbourhood ? ', ' + bar.neighbourhood : ''}. You're welcome. getbrewscanner.com`;
                     return (
                       <>
                         <button
                           className="w-full text-left px-4 py-2.5 text-xs font-bold text-[#1c1917] hover:bg-[#fef9f0] transition-colors flex items-center gap-2 border-b border-[#fde8c4]"
                           onClick={async () => {
-                            await navigator.clipboard.writeText('https://pintmapyvr.com');
+                            await navigator.clipboard.writeText('https://getbrewscanner.com');
                             setShareCopied(true);
                             setTimeout(() => { setShareCopied(false); setShareOpenIdx(null); }, 2000);
                           }}
@@ -360,7 +360,7 @@ export default function HeroSection({
                           📋 {shareCopied ? 'Copied!' : 'Copy Link'}
                         </button>
                         <a
-                          href={`https://wa.me/?text=${encodeURIComponent(shareText + '\nhttps://pintmapyvr.com')}`}
+                          href={`https://wa.me/?text=${encodeURIComponent(shareText + '\nhttps://getbrewscanner.com')}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={() => setShareOpenIdx(null)}
@@ -369,7 +369,7 @@ export default function HeroSection({
                           💬 Share on WhatsApp
                         </a>
                         <a
-                          href={`mailto:?subject=${encodeURIComponent('Cheapest Pint in Vancouver Right Now')}&body=${encodeURIComponent(shareText + '\nhttps://pintmapyvr.com')}`}
+                          href={`mailto:?subject=${encodeURIComponent('Cheapest Pint in Vancouver Right Now')}&body=${encodeURIComponent(shareText + '\nhttps://getbrewscanner.com')}`}
                           onClick={() => setShareOpenIdx(null)}
                           className="w-full block px-4 py-2.5 text-xs font-bold text-[#1c1917] hover:bg-[#fef9f0] transition-colors"
                         >

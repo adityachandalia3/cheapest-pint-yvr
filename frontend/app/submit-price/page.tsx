@@ -4,7 +4,7 @@ import SubmitPriceForm from '@/components/SubmitPriceForm';
 export const dynamic = 'force-dynamic';
 
 export const metadata = {
-  title: 'Submit a Price — Pint Map YVR',
+  title: 'Submit a Price — Brewscanner',
 };
 
 export interface BarOption {

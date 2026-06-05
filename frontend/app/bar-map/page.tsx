@@ -5,7 +5,7 @@ import { Bar } from '@/lib/types';
 export const dynamic = 'force-dynamic';
 
 export const metadata = {
-  title: 'Bar Map — Pint Map YVR',
+  title: 'Bar Map — Brewscanner',
 };
 
 export default async function BarMapPage() {

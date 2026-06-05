@@ -35,7 +35,7 @@ export default function CrawlShareView({ crawl }: { crawl: CrawlResult }) {
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-3">
             <a href="/" className="text-xs font-black text-[#B34207] hover:underline tracking-wide">
-              🍺 PINT MAP YVR
+              🍺 BREWSCANNER
             </a>
             <span className="text-stone-300">·</span>
             <span className="text-xs text-stone-400 font-semibold">Bar Crawl</span>

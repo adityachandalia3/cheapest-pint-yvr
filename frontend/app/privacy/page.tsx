@@ -1,11 +1,11 @@
 export const metadata = {
-  title: 'Privacy Policy — Pint Map YVR',
+  title: 'Privacy Policy — Brewscanner',
 };
 
 const sections = [
   {
     title: 'Introduction',
-    body: 'Pint Map YVR respects your privacy. This policy explains what data we collect and how we use it.',
+    body: 'Brewscanner respects your privacy. This policy explains what data we collect and how we use it.',
   },
   {
     title: 'Data We Collect',

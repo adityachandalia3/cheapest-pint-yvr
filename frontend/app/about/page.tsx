@@ -1,7 +1,7 @@
 import Link from 'next/link';
 
 export const metadata = {
-  title: 'About — Pint Map YVR',
+  title: 'About — Brewscanner',
 };
 
 export default function AboutPage() {
@@ -11,14 +11,14 @@ export default function AboutPage() {
         {/* Logo */}
         <div className="flex items-center gap-3 mb-10">
           <span className="text-4xl">🍺</span>
-          <span className="font-black text-2xl tracking-tight text-[#B34207]">PINT MAP YVR</span>
+          <span className="font-black text-2xl tracking-tight text-[#B34207]">Brewscanner</span>
         </div>
 
         <div className="prose-like space-y-6 text-stone-600 leading-relaxed text-base">
           <div>
-            <h2 className="text-xl font-black text-[#1c1917] mb-2">What is Pint Map YVR?</h2>
+            <h2 className="text-xl font-black text-[#1c1917] mb-2">What is Brewscanner?</h2>
             <p>
-              Pint Map YVR scans 100+ bars across Vancouver to find you the cheapest pint in the city. No hunting. No guessing. Just the best deal, right now.
+              Brewscanner scans 100+ bars across Vancouver to find you the cheapest pint in the city. No hunting. No guessing. Just the best deal, right now.
             </p>
             <p className="mt-3">
               But we&apos;re not just a price list. We&apos;ve gone deeper. Find Your Vibe lets you describe the night you want in plain English — &quot;lively sports bar with friends&quot; or &quot;chill spot for a date&quot; — and we&apos;ll match you with bars that actually fit. Want to hop between spots? The Bar Crawl Builder plans a multi-stop night out, starting cheap and building toward wherever you want to end up. It&apos;s an immersive experience, not a database.
@@ -28,7 +28,7 @@ export default function AboutPage() {
           <div>
             <h2 className="text-xl font-black text-[#1c1917] mb-2">The World Cup is coming</h2>
             <p>
-              Vancouver is one of the host cities for the 2026 FIFA World Cup, and that means thousands of football fans from around the world are going to be looking for a good bar to watch the game. We&apos;re building Pint Map YVR to be their first stop — helping visitors and locals alike find the best atmosphere, the best price, and the best pint in the city.
+              Vancouver is one of the host cities for the 2026 FIFA World Cup, and that means thousands of football fans from around the world are going to be looking for a good bar to watch the game. We&apos;re building Brewscanner to be their first stop — helping visitors and locals alike find the best atmosphere, the best price, and the best pint in the city.
             </p>
           </div>
 

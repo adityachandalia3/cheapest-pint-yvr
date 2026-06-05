@@ -1,19 +1,19 @@
 export const metadata = {
-  title: 'Terms & Conditions — Pint Map YVR',
+  title: 'Terms & Conditions — Brewscanner',
 };
 
 const sections = [
   {
     title: 'Introduction',
-    body: 'Pint Map YVR is a free service that helps users find beer prices across Vancouver bars. By using this site you agree to these terms and conditions.',
+    body: 'Brewscanner is a free service that helps users find beer prices across Vancouver bars. By using this site you agree to these terms and conditions.',
   },
   {
     title: 'Price Accuracy Disclaimer',
-    body: 'All prices displayed on Pint Map YVR are sourced automatically via web scraping and community submissions. Prices may be out of date, inaccurate, or no longer available. Pint Map YVR makes no guarantee that prices displayed reflect current bar pricing. Always verify prices directly with the bar before making decisions based on information shown on this site. We are not liable for any discrepancy between prices shown and prices charged.',
+    body: 'All prices displayed on Brewscanner are sourced automatically via web scraping and community submissions. Prices may be out of date, inaccurate, or no longer available. Brewscanner makes no guarantee that prices displayed reflect current bar pricing. Always verify prices directly with the bar before making decisions based on information shown on this site. We are not liable for any discrepancy between prices shown and prices charged.',
   },
   {
     title: 'User Submitted Content',
-    body: 'Users may submit prices and information via our submission form. Pint Map YVR does not verify user-submitted content before it is reviewed by our team. We reserve the right to remove any submission at our discretion. By submitting content you confirm it is accurate to the best of your knowledge.',
+    body: 'Users may submit prices and information via our submission form. Brewscanner does not verify user-submitted content before it is reviewed by our team. We reserve the right to remove any submission at our discretion. By submitting content you confirm it is accurate to the best of your knowledge.',
   },
   {
     title: 'Third Party Data',
@@ -21,11 +21,11 @@ const sections = [
   },
   {
     title: 'Website Scraping',
-    body: "Pint Map YVR collects publicly available pricing information from bar websites for the purpose of helping consumers find affordable options. We respect robots.txt files and do not collect personal data from third-party websites.",
+    body: "Brewscanner collects publicly available pricing information from bar websites for the purpose of helping consumers find affordable options. We respect robots.txt files and do not collect personal data from third-party websites.",
   },
   {
     title: 'Limitation of Liability',
-    body: 'Pint Map YVR is provided as-is with no warranties. We are not responsible for any loss or inconvenience arising from use of this site, including but not limited to incorrect pricing, bar closures, or changes in business operations.',
+    body: 'Brewscanner is provided as-is with no warranties. We are not responsible for any loss or inconvenience arising from use of this site, including but not limited to incorrect pricing, bar closures, or changes in business operations.',
   },
   {
     title: 'Changes to Terms',

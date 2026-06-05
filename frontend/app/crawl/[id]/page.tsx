@@ -8,8 +8,8 @@ export const dynamic = 'force-dynamic';
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
-    title: 'Bar Crawl Itinerary — Pint Map YVR',
-    description: 'A shareable bar crawl itinerary built on Pint Map YVR.',
+    title: 'Bar Crawl Itinerary — Brewscanner',
+    description: 'A shareable bar crawl itinerary built on Brewscanner.',
   };
 }
 
