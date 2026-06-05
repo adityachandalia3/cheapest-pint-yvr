@@ -48,7 +48,7 @@ export default function HeroSection({
   const [containerWidth, setContainerWidth] = useState(0);
   const touchStartX = useRef<number | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [showInput, setShowInput] = useState(false);
+  const [pendingTime, setPendingTime] = useState(simulatedTime ?? '');
   const pickerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -56,7 +56,6 @@ export default function HeroSection({
     function handler(e: MouseEvent) {
       if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
         setPickerOpen(false);
-        setShowInput(false);
       }
     }
     document.addEventListener('mousedown', handler);
@@ -136,7 +135,7 @@ export default function HeroSection({
         {/* Time picker pill */}
         <div ref={pickerRef} className="relative">
           <button
-            onClick={() => { setPickerOpen(o => !o); setShowInput(false); }}
+            onClick={() => setPickerOpen(o => !o)}
             className={`flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full border transition-colors ${
               simulatedTime
                 ? 'bg-amber-50 border-amber-300 text-amber-700'
@@ -148,42 +147,43 @@ export default function HeroSection({
           </button>
 
           {pickerOpen && (
-            <div className="absolute top-full mt-1 right-0 bg-white border border-[#fde8c4] rounded-xl shadow-lg z-50 overflow-hidden min-w-[140px]">
+            <div className="absolute top-full mt-1 right-0 bg-white border border-[#fde8c4] rounded-xl shadow-lg z-50 overflow-hidden min-w-[170px]">
               <button
-                onMouseDown={() => {
+                onMouseDown={e => {
+                  e.preventDefault();
                   onTimeChange?.(null);
+                  setPendingTime('');
                   setPickerOpen(false);
-                  setShowInput(false);
                 }}
                 className="w-full px-3 py-2 text-left text-xs font-semibold hover:bg-[#fff4e6] transition-colors text-[#1c1917] border-b border-[#fde8c4] flex items-center gap-2"
               >
                 <span className="w-2 h-2 rounded-full bg-green-400 inline-block shrink-0" />
                 Right Now
               </button>
-              {showInput ? (
-                <div className="px-3 py-2">
+              <div className="px-3 py-2.5">
+                <p className="text-[9px] font-black uppercase tracking-widest text-stone-400 mb-1.5">Pick a time</p>
+                <div className="flex gap-1.5">
                   <input
                     type="time"
-                    autoFocus
-                    className="w-full text-xs border border-[#fde8c4] rounded-lg px-2 py-1.5 outline-none focus:border-[#B34207]/50 text-[#1c1917]"
-                    onChange={e => {
-                      if (e.target.value) {
-                        onTimeChange?.(e.target.value);
+                    value={pendingTime}
+                    onChange={e => setPendingTime(e.target.value)}
+                    className="flex-1 text-xs border border-[#fde8c4] rounded-lg px-2 py-1.5 outline-none focus:border-[#B34207]/50 text-[#1c1917] bg-[#fef9f0]"
+                  />
+                  <button
+                    onMouseDown={e => {
+                      e.preventDefault();
+                      if (pendingTime) {
+                        onTimeChange?.(pendingTime);
                         setPickerOpen(false);
-                        setShowInput(false);
                       }
                     }}
-                  />
+                    disabled={!pendingTime}
+                    className="text-[11px] font-black px-2.5 py-1.5 bg-[#B34207] text-white rounded-lg disabled:opacity-30 transition-opacity"
+                  >
+                    Set
+                  </button>
                 </div>
-              ) : (
-                <button
-                  onMouseDown={() => setShowInput(true)}
-                  className="w-full px-3 py-2 text-left text-xs font-semibold hover:bg-[#fff4e6] transition-colors text-[#1c1917] flex items-center gap-2"
-                >
-                  <span>🕐</span>
-                  Pick a Time
-                </button>
-              )}
+              </div>
             </div>
           )}
         </div>
