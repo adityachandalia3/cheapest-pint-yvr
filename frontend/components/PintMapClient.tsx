@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import HeroSection from './HeroSection';
 import FilterBar from './FilterBar';
 import VibeSearch, { VIBE_CHIPS } from './VibeSearch';
+import { useMyNightContext } from '@/lib/myNightContext';
 
 const Leaderboard = dynamic(() => import('./Leaderboard'), { ssr: false });
 const MapSection = dynamic(() => import('./MapSection'), { ssr: false });
@@ -28,6 +29,7 @@ export default function PintMapClient({ initialBars }: { initialBars: Bar[] }) {
   const [hoveredBarId, setHoveredBarId] = useState<string | null>(null);
   const [vibeOpen, setVibeOpen] = useState(false);
   const [vibeQuery, setVibeQuery] = useState('');
+  const { addBar } = useMyNightContext();
 
   const effectiveNow = useMemo(() => {
     if (!simulatedTime) return now;
@@ -246,11 +248,14 @@ export default function PintMapClient({ initialBars }: { initialBars: Bar[] }) {
         isOpen={vibeOpen}
         onClose={() => { setVibeOpen(false); setVibeQuery(''); }}
         initialQuery={vibeQuery}
+        bars={bars}
+        onAddToMyNight={addBar}
         onShowOnMap={barId => {
           setVibeOpen(false);
           handleBarCardClick(barId);
         }}
       />
+
     </div>
   );
 }

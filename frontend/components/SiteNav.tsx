@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import VibeSearch from './VibeSearch';
+import MyNightDrawer from './MyNightDrawer';
+import { useMyNightContext } from '@/lib/myNightContext';
 
 const NAV_LINKS = [
   { emoji: '🏆', label: 'World Cup Mode', href: null, comingSoon: true },
@@ -16,8 +18,10 @@ const NAV_LINKS = [
 export default function SiteNav() {
   const [vibeOpen, setVibeOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [myNightOpen, setMyNightOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+  const { myNight, addBar } = useMyNightContext();
 
   useEffect(() => {
     if (!moreOpen) return;
@@ -42,17 +46,33 @@ export default function SiteNav() {
           <span className="text-lg leading-none">🍺</span>
           <span className="font-black text-sm tracking-tight text-[#B34207]">PINT MAP YVR</span>
         </Link>
-        <button
-          onClick={() => setMoreOpen(true)}
-          className="w-9 h-9 flex items-center justify-center rounded-full text-stone-500"
-          aria-label="Menu"
-        >
-          <svg width="18" height="14" viewBox="0 0 18 14" fill="none">
-            <rect y="0" width="18" height="2" rx="1" fill="currentColor"/>
-            <rect y="6" width="18" height="2" rx="1" fill="currentColor"/>
-            <rect y="12" width="18" height="2" rx="1" fill="currentColor"/>
-          </svg>
-        </button>
+        <div className="flex items-center gap-1">
+          {/* My Night cart icon */}
+          <button
+            onClick={() => setMyNightOpen(true)}
+            className="relative flex items-center gap-1 px-2 py-1 rounded-full text-stone-600 hover:bg-[#fde8c4]/50 transition-colors"
+            aria-label="My Night"
+          >
+            <span className="text-base leading-none">🎉</span>
+            <span className="text-xs font-black text-[#1c1917]">My Night</span>
+            {myNight.length > 0 && (
+              <span className="min-w-[16px] h-4 bg-[#B34207] text-white text-[9px] font-black rounded-full flex items-center justify-center px-0.5">
+                {myNight.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setMoreOpen(true)}
+            className="w-9 h-9 flex items-center justify-center rounded-full text-stone-500"
+            aria-label="Menu"
+          >
+            <svg width="18" height="14" viewBox="0 0 18 14" fill="none">
+              <rect y="0" width="18" height="2" rx="1" fill="currentColor"/>
+              <rect y="6" width="18" height="2" rx="1" fill="currentColor"/>
+              <rect y="12" width="18" height="2" rx="1" fill="currentColor"/>
+            </svg>
+          </button>
+        </div>
       </header>
 
       {/* ── Desktop navbar ─────────────────────────────────────────────── */}
@@ -87,10 +107,25 @@ export default function SiteNav() {
             </Link>
           ))}
 
+          {/* My Night cart icon */}
+          <button
+            onClick={() => setMyNightOpen(true)}
+            className="relative ml-2 flex items-center gap-1.5 text-sm font-semibold text-stone-600 hover:text-[#B34207] px-3 py-1.5 rounded-lg hover:bg-[#fde8c4]/40 transition-all whitespace-nowrap"
+            aria-label="My Night"
+          >
+            <span>🎉</span>
+            <span>My Night</span>
+            {myNight.length > 0 && (
+              <span className="min-w-[18px] h-[18px] bg-[#B34207] text-white text-[9px] font-black rounded-full flex items-center justify-center px-1">
+                {myNight.length}
+              </span>
+            )}
+          </button>
+
           {/* Build a Crawl — pill CTA */}
           <Link
             href="/crawl-builder"
-            className="ml-2 flex items-center gap-1.5 text-sm font-black text-[#B34207] border border-[#B34207] hover:bg-[#B34207] hover:text-white px-4 py-2 rounded-full transition-all duration-200 whitespace-nowrap"
+            className="ml-1 flex items-center gap-1.5 text-sm font-black text-[#B34207] border border-[#B34207] hover:bg-[#B34207] hover:text-white px-4 py-2 rounded-full transition-all duration-200 whitespace-nowrap"
           >
             🗺 Build a Crawl
           </Link>
@@ -194,7 +229,11 @@ export default function SiteNav() {
         isOpen={vibeOpen}
         onClose={() => setVibeOpen(false)}
         onShowOnMap={handleShowOnMap}
+        onAddToMyNight={addBar}
       />
+
+      {/* ── My Night Drawer ─────────────────────────────────────────────── */}
+      <MyNightDrawer isOpen={myNightOpen} onClose={() => setMyNightOpen(false)} />
     </>
   );
 }

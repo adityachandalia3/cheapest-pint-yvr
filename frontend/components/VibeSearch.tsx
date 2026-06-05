@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
+import type { Bar } from '@/lib/types';
+import type { MyNightBar } from '@/lib/myNightContext';
 
 interface VibeResult {
   bar_id: string;
@@ -38,16 +40,21 @@ export default function VibeSearch({
   onClose,
   onShowOnMap,
   initialQuery,
+  bars,
+  onAddToMyNight,
 }: {
   isOpen: boolean;
   onClose: () => void;
   onShowOnMap: (barId: string) => void;
   initialQuery?: string;
+  bars?: Bar[];
+  onAddToMyNight?: (bar: MyNightBar) => 'added' | 'duplicate';
 }) {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<VibeResult[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -95,6 +102,30 @@ export default function VibeSearch({
     onShowOnMap(barId);
     onClose();
   };
+
+  function directionsUrl(r: VibeResult): string {
+    const rawBar = bars?.find(b => b.id === r.bar_id);
+    if (rawBar?.latitude && rawBar?.longitude) {
+      return `https://www.google.com/maps/dir/?api=1&destination=${rawBar.latitude},${rawBar.longitude}`;
+    }
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(r.bar_name + ' Vancouver BC')}`;
+  }
+
+  function handleAddToMyNight(r: VibeResult) {
+    if (!onAddToMyNight) return;
+    const rawBar = bars?.find(b => b.id === r.bar_id);
+    const result = onAddToMyNight({
+      id: r.bar_id,
+      name: r.bar_name,
+      neighbourhood: r.neighbourhood,
+      price: r.cheapest_price,
+      lat: rawBar?.latitude ?? null,
+      lng: rawBar?.longitude ?? null,
+    });
+    if (result === 'added') {
+      setAddedIds(prev => new Set(prev).add(r.bar_id));
+    }
+  }
 
   if (!isOpen) return null;
 
@@ -204,35 +235,61 @@ export default function VibeSearch({
                       {i + 1}
                     </span>
                   </div>
-                  <p className="text-xs text-stone-500 leading-relaxed mb-3">{r.match_reason}</p>
-                  <div className="flex items-center justify-between pt-2.5 border-t border-[#fde8c4]">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {r.cheapest_price != null ? (
-                        <>
-                          <span className="text-[#B34207] font-black text-lg leading-none">
-                            ${Number(r.cheapest_price).toFixed(2)}
-                          </span>
-                          <span className="text-[10px] text-stone-400">cheapest pint</span>
-                        </>
-                      ) : (
-                        <>
-                          <span className="text-[11px] text-stone-400 italic">Price info unavailable</span>
-                          {r.expense_rating && (
-                            <span className="text-[10px] bg-stone-100 text-stone-500 border border-stone-200 px-1.5 py-0.5 rounded-full font-semibold">
-                              {formatExpenseRating(r.expense_rating)}
-                            </span>
-                          )}
-                        </>
-                      )}
-                      {r.is_happy_hour && (
-                        <span className="text-[10px] bg-[#F5A623]/10 text-[#b45309] border border-[#F5A623]/25 px-1.5 py-0.5 rounded-full font-semibold">
-                          🍻 HH
+                  <p className="text-xs text-stone-500 leading-relaxed mb-2.5">{r.match_reason}</p>
+
+                  {/* Price / HH badges */}
+                  <div className="flex items-center gap-2 flex-wrap mb-2.5">
+                    {r.cheapest_price != null ? (
+                      <>
+                        <span className="text-[#B34207] font-black text-lg leading-none">
+                          ${Number(r.cheapest_price).toFixed(2)}
                         </span>
-                      )}
-                    </div>
+                        <span className="text-[10px] text-stone-400">cheapest pint</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-[11px] text-stone-400 italic">Price info unavailable</span>
+                        {r.expense_rating && (
+                          <span className="text-[10px] bg-stone-100 text-stone-500 border border-stone-200 px-1.5 py-0.5 rounded-full font-semibold">
+                            {formatExpenseRating(r.expense_rating)}
+                          </span>
+                        )}
+                      </>
+                    )}
+                    {r.is_happy_hour && (
+                      <span className="text-[10px] bg-[#F5A623]/10 text-[#b45309] border border-[#F5A623]/25 px-1.5 py-0.5 rounded-full font-semibold">
+                        🍻 HH
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Action buttons */}
+                  <div className="flex items-center gap-2 flex-wrap pt-2.5 border-t border-[#fde8c4]">
+                    <a
+                      href={directionsUrl(r)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs font-black px-3 py-1.5 rounded-lg bg-[#B34207] hover:bg-[#8f3506] text-white transition-colors"
+                      onClick={e => e.stopPropagation()}
+                    >
+                      📍 Directions
+                    </a>
+                    {onAddToMyNight && (
+                      <button
+                        onClick={() => handleAddToMyNight(r)}
+                        disabled={addedIds.has(r.bar_id)}
+                        className={`inline-flex items-center gap-1 text-xs font-black px-3 py-1.5 rounded-lg border transition-all ${
+                          addedIds.has(r.bar_id)
+                            ? 'bg-amber-50 border-amber-200 text-amber-700'
+                            : 'bg-[#fef9f0] border-[#fde8c4] text-[#1c1917] hover:border-[#B34207]/40'
+                        }`}
+                      >
+                        {addedIds.has(r.bar_id) ? '✓ Added' : '+ My Night'}
+                      </button>
+                    )}
                     <button
                       onClick={() => handleShowOnMap(r.bar_id)}
-                      className="text-xs text-stone-500 hover:text-[#B34207] border border-[#fde8c4] hover:border-[#B34207]/40 px-2.5 py-1 rounded-lg transition-all font-semibold"
+                      className="ml-auto text-xs text-stone-400 hover:text-[#B34207] transition-colors font-semibold"
                     >
                       Show on map ↑
                     </button>

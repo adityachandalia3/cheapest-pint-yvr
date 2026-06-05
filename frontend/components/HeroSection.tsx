@@ -50,6 +50,20 @@ export default function HeroSection({
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pendingTime, setPendingTime] = useState(simulatedTime ?? '');
   const [timeError, setTimeError] = useState('');
+  const [shareOpenIdx, setShareOpenIdx] = useState<number | null>(null);
+  const [shareCopied, setShareCopied] = useState(false);
+  const shareRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (shareOpenIdx === null) return;
+    function handler(e: MouseEvent) {
+      if (shareRef.current && !shareRef.current.contains(e.target as Node)) {
+        setShareOpenIdx(null);
+      }
+    }
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [shareOpenIdx]);
 
   function isValidBarTime(t: string): boolean {
     const h = parseInt(t.split(':')[0], 10);
@@ -294,21 +308,78 @@ export default function HeroSection({
                     </span>
                   )}
                   <div
-                    className="mt-2.5 transition-opacity duration-500"
+                    className="mt-2.5 transition-opacity duration-500 flex items-center gap-2 flex-wrap"
                     style={{ opacity: isActive ? 1 : 0, pointerEvents: isActive ? 'auto' : 'none' }}
                   >
                     <a
                       href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(bar.name + ' ' + (bar.address ?? 'Vancouver BC'))}&query_place_id=${bar.google_place_id}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 font-black text-xs px-4 py-1.5 rounded-full bg-[#B34207] hover:bg-[#8f3506] text-white shadow-lg transition-colors"
+                      className="inline-flex items-center gap-1.5 font-black text-xs px-4 py-1.5 rounded-full bg-[#B34207] hover:bg-[#8f3506] text-white shadow-lg transition-colors whitespace-nowrap"
                       onClick={e => e.stopPropagation()}
                     >
                       📍 Get Directions
                     </a>
+                    <button
+                      className="inline-flex items-center gap-1.5 font-black text-xs px-3 py-1.5 rounded-full bg-white/20 hover:bg-white/30 text-white border border-white/30 backdrop-blur-sm transition-colors whitespace-nowrap"
+                      onClick={async e => {
+                        e.stopPropagation();
+                        const shareText = `Found a $${bar.activePrice.toFixed(2)} pint in Vancouver 🍺 ${getDisplayName(bar.name)}${bar.neighbourhood ? ', ' + bar.neighbourhood : ''}. You're welcome. pintmapyvr.com`;
+                        if (navigator.share) {
+                          await navigator.share({ title: 'Cheapest Pint in Vancouver Right Now', text: shareText, url: 'https://pintmapyvr.com' });
+                        } else {
+                          setShareOpenIdx(shareOpenIdx === i ? null : i);
+                        }
+                      }}
+                    >
+                      🔗 Share This Deal
+                    </button>
                   </div>
                 </div>
               </div>
+
+              {/* Share dropdown — outside overflow-hidden so it isn't clipped */}
+              {shareOpenIdx === i && (
+                <div
+                  ref={shareRef}
+                  className="absolute bottom-[84px] left-4 right-4 bg-white border border-[#fde8c4] rounded-xl shadow-xl z-20 overflow-hidden"
+                  onClick={e => e.stopPropagation()}
+                >
+                  {(() => {
+                    const shareText = `Found a $${bar.activePrice.toFixed(2)} pint in Vancouver 🍺 ${getDisplayName(bar.name)}${bar.neighbourhood ? ', ' + bar.neighbourhood : ''}. You're welcome. pintmapyvr.com`;
+                    return (
+                      <>
+                        <button
+                          className="w-full text-left px-4 py-2.5 text-xs font-bold text-[#1c1917] hover:bg-[#fef9f0] transition-colors flex items-center gap-2 border-b border-[#fde8c4]"
+                          onClick={async () => {
+                            await navigator.clipboard.writeText('https://pintmapyvr.com');
+                            setShareCopied(true);
+                            setTimeout(() => { setShareCopied(false); setShareOpenIdx(null); }, 2000);
+                          }}
+                        >
+                          📋 {shareCopied ? 'Copied!' : 'Copy Link'}
+                        </button>
+                        <a
+                          href={`https://wa.me/?text=${encodeURIComponent(shareText + '\nhttps://pintmapyvr.com')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={() => setShareOpenIdx(null)}
+                          className="w-full block px-4 py-2.5 text-xs font-bold text-[#1c1917] hover:bg-[#fef9f0] transition-colors border-b border-[#fde8c4]"
+                        >
+                          💬 Share on WhatsApp
+                        </a>
+                        <a
+                          href={`mailto:?subject=${encodeURIComponent('Cheapest Pint in Vancouver Right Now')}&body=${encodeURIComponent(shareText + '\nhttps://pintmapyvr.com')}`}
+                          onClick={() => setShareOpenIdx(null)}
+                          className="w-full block px-4 py-2.5 text-xs font-bold text-[#1c1917] hover:bg-[#fef9f0] transition-colors"
+                        >
+                          ✉️ Share via Email
+                        </a>
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
             </div>
           );
         })}

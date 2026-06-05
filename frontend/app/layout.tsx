@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import SiteNav from '@/components/SiteNav';
 import SiteFooter from '@/components/SiteFooter';
+import AppProviders from '@/components/AppProviders';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
@@ -16,12 +17,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className={`${inter.variable} font-sans antialiased bg-[#fef9f0]`}>
-        <SiteNav />
-        {/* pb accounts for the fixed mobile bottom tab bar */}
-        <div className="pb-[72px] md:pb-0">
-          {children}
-          <SiteFooter />
-        </div>
+        <AppProviders>
+          <SiteNav />
+          {/* pb accounts for the fixed mobile bottom tab bar */}
+          <div className="pb-[72px] md:pb-0">
+            {children}
+            <SiteFooter />
+          </div>
+        </AppProviders>
       </body>
     </html>
   );
