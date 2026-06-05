@@ -188,18 +188,18 @@ export default function MapSection({ bars, cheapestBarId, highlightedBarId, hove
             }}
             options={{ pixelOffset: new window.google.maps.Size(0, -40) }}
           >
-            <div style={{ maxWidth: '230px', fontFamily: 'Inter, sans-serif', padding: '4px 2px' }}>
-              <p style={{ fontWeight: 900, fontSize: '15px', marginBottom: '2px', color: '#111' }}>
+            <div style={{ maxWidth: '220px', fontFamily: 'Inter, sans-serif', padding: '2px 2px 0' }}>
+              <p style={{ fontWeight: 900, fontSize: '14px', marginBottom: '1px', color: '#111' }}>
                 {selectedBar.name}
               </p>
               {selectedBar.neighbourhood && (
-                <p style={{ color: '#888', fontSize: '12px', marginBottom: '10px' }}>
+                <p style={{ color: '#888', fontSize: '11px', marginBottom: '6px' }}>
                   {selectedBar.neighbourhood}
                 </p>
               )}
 
               <div
-                style={{ borderTop: '1px solid #eee', paddingTop: '8px', marginBottom: '8px' }}
+                style={{ borderTop: '1px solid #eee', paddingTop: '5px', marginBottom: '5px' }}
               >
                 {(['cheapest_beer', 'cheapest_lager', 'cheapest_ipa'] as const).map(cat => {
                   const pint = selectedBar.pint_prices.find(p => p.category === cat);
@@ -211,8 +211,8 @@ export default function MapSection({ bars, cheapestBarId, highlightedBarId, hove
                       style={{
                         display: 'flex',
                         justifyContent: 'space-between',
-                        marginBottom: '4px',
-                        fontSize: '13px',
+                        marginBottom: '3px',
+                        fontSize: '12px',
                       }}
                     >
                       <span style={{ color: '#555' }}>{CATEGORY_LABELS[cat]}</span>
@@ -227,10 +227,10 @@ export default function MapSection({ bars, cheapestBarId, highlightedBarId, hove
                   style={{
                     fontSize: '11px',
                     color: selectedBar.isHappyHour ? '#c27a00' : '#aaa',
-                    marginBottom: '10px',
+                    marginBottom: '6px',
                   }}
                 >
-                  {selectedBar.isHappyHour ? '🎉' : '🕐'} Happy Hour:{' '}
+                  {selectedBar.isHappyHour ? '🎉' : '🕐'} HH:{' '}
                   {selectedBar.happy_hour_windows[0].start_time.slice(0, 5)} –{' '}
                   {selectedBar.happy_hour_windows[0].end_time.slice(0, 5)}
                 </p>
@@ -246,10 +246,10 @@ export default function MapSection({ bars, cheapestBarId, highlightedBarId, hove
                   display: 'inline-block',
                   background: '#B34207',
                   color: '#ffffff',
-                  padding: '6px 14px',
+                  padding: '5px 12px',
                   borderRadius: '20px',
                   fontWeight: 700,
-                  fontSize: '12px',
+                  fontSize: '11px',
                   textDecoration: 'none',
                 }}
               >
