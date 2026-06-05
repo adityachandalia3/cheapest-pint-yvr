@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { IconBeer } from '@tabler/icons-react';
 import VibeSearch from './VibeSearch';
 import MyNightDrawer from './MyNightDrawer';
 import { useMyNightContext } from '@/lib/myNightContext';
@@ -15,10 +16,19 @@ const NAV_LINKS = [
   { emoji: 'ℹ️', label: 'About', href: '/about', comingSoon: false },
 ];
 
+function Wordmark({ mobile }: { mobile?: boolean }) {
+  return (
+    <span style={{ fontSize: mobile ? 16 : 18, fontWeight: 600, lineHeight: 1, letterSpacing: '-0.01em' }}>
+      <span style={{ color: '#B34207' }}>Brew</span>
+      <span style={{ color: '#1c1410' }}>scanner</span>
+    </span>
+  );
+}
+
 export default function SiteNav() {
   const [vibeOpen, setVibeOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
-  const [myNightOpen, setMyNightOpen] = useState(false);
+  const [myPicksOpen, setMyPicksOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const { myNight, addBar } = useMyNightContext();
@@ -44,19 +54,18 @@ export default function SiteNav() {
       <header className="md:hidden sticky top-0 z-50 flex items-center justify-between px-4 h-12 bg-[#faf5eb]" style={{ borderBottom: '0.5px solid #e8dcc8' }}>
         <Link href="/" className="flex items-center gap-2">
           <span className="text-lg leading-none">🍺</span>
-          <span className="font-black text-sm tracking-tight text-[#B34207]">PINT MAP YVR</span>
+          <Wordmark mobile />
         </Link>
         <div className="flex items-center gap-1">
-          {/* My Night cart icon */}
+          {/* My Picks — icon only on mobile */}
           <button
-            onClick={() => setMyNightOpen(true)}
-            className="relative flex items-center gap-1 px-2 py-1 rounded-full text-stone-600 hover:bg-[#fde8c4]/50 transition-colors"
-            aria-label="My Night"
+            onClick={() => setMyPicksOpen(true)}
+            className="relative w-9 h-9 flex items-center justify-center rounded-full text-stone-500 hover:bg-[#fde8c4]/50 transition-colors"
+            aria-label="My Picks"
           >
-            <span className="text-base leading-none">🎉</span>
-            <span className="text-xs font-black text-[#1c1917]">My Night</span>
+            <IconBeer size={20} stroke={1.75} />
             {myNight.length > 0 && (
-              <span className="min-w-[16px] h-4 bg-[#B34207] text-white text-[9px] font-black rounded-full flex items-center justify-center px-0.5">
+              <span className="absolute top-0.5 right-0.5 min-w-[14px] h-[14px] bg-[#B34207] text-white text-[8px] font-black rounded-full flex items-center justify-center px-0.5 leading-none">
                 {myNight.length}
               </span>
             )}
@@ -77,49 +86,27 @@ export default function SiteNav() {
 
       {/* ── Desktop navbar ─────────────────────────────────────────────── */}
       <header className="hidden md:flex sticky top-0 z-50 items-center px-6 h-14 bg-[#faf5eb] border-b border-[#e8dcc8]">
-        {/* Logo */}
         <Link href="/" className="flex items-center gap-2 shrink-0 mr-auto">
           <span className="text-xl leading-none">🍺</span>
-          <span className="font-black text-base tracking-tight text-[#B34207] whitespace-nowrap">
-            PINT MAP YVR
-          </span>
+          <Wordmark />
         </Link>
 
-        {/* Nav links */}
         <nav className="flex items-center gap-1">
-          {NAV_LINKS.map(link => link.comingSoon ? (
-            <span
-              key="world-cup"
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-stone-400 cursor-default select-none"
-            >
-              {link.emoji} {link.label}
-              <span className="text-[10px] font-black bg-[#F5A623]/15 text-[#b45309] border border-[#F5A623]/30 px-1.5 py-0.5 rounded-full ml-1">
-                Soon
-              </span>
-            </span>
-          ) : (
-            <Link
-              key={link.href}
-              href={link.href!}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-stone-600 hover:text-[#B34207] rounded-lg hover:bg-[#fde8c4]/40 transition-all whitespace-nowrap"
-            >
-              {link.emoji} {link.label}
-            </Link>
-          ))}
-
-          {/* My Night cart icon */}
+          {/* My Picks — icon + label on desktop */}
           <button
-            onClick={() => setMyNightOpen(true)}
-            className="relative ml-2 flex items-center gap-1.5 text-sm font-semibold text-stone-600 hover:text-[#B34207] px-3 py-1.5 rounded-lg hover:bg-[#fde8c4]/40 transition-all whitespace-nowrap"
-            aria-label="My Night"
+            onClick={() => setMyPicksOpen(true)}
+            className="relative ml-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-stone-600 hover:text-[#B34207] hover:bg-[#fde8c4]/40 transition-all whitespace-nowrap"
+            aria-label="My Picks"
           >
-            <span>🎉</span>
-            <span>My Night</span>
-            {myNight.length > 0 && (
-              <span className="min-w-[18px] h-[18px] bg-[#B34207] text-white text-[9px] font-black rounded-full flex items-center justify-center px-1">
-                {myNight.length}
-              </span>
-            )}
+            <span className="relative">
+              <IconBeer size={22} stroke={1.75} />
+              {myNight.length > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] bg-[#B34207] text-white text-[8px] font-black rounded-full flex items-center justify-center px-0.5 leading-none">
+                  {myNight.length}
+                </span>
+              )}
+            </span>
+            <span style={{ fontSize: 13, fontWeight: 500 }}>My Picks</span>
           </button>
 
           {/* Build a Crawl — pill CTA */}
@@ -138,7 +125,6 @@ export default function SiteNav() {
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         <div className="flex">
-          {/* Find Vibe — pulsing amber badge */}
           <button
             onClick={() => setVibeOpen(true)}
             className={`flex-1 flex flex-col items-center justify-center py-2 gap-0 text-xs font-black transition-colors ${
@@ -156,7 +142,6 @@ export default function SiteNav() {
             <span className="text-[9px] text-stone-300 leading-none mt-0.5">Try me!</span>
           </button>
 
-          {/* Crawl — pulsing amber badge */}
           <Link
             href="/crawl-builder"
             className={`flex-1 flex flex-col items-center justify-center py-2 gap-0 text-xs font-black transition-colors ${
@@ -174,7 +159,6 @@ export default function SiteNav() {
             <span className="text-[9px] text-stone-300 leading-none mt-0.5">Try me!</span>
           </Link>
 
-          {/* World Cup — coming soon, non-interactive */}
           <div className="flex-1 flex flex-col items-center justify-center py-2.5 gap-0 text-xs font-black text-stone-400 cursor-default select-none opacity-50">
             <span className="text-[20px] leading-none">⚽</span>
             <span className="mt-0.5">World Cup</span>
@@ -232,8 +216,8 @@ export default function SiteNav() {
         onAddToMyNight={addBar}
       />
 
-      {/* ── My Night Drawer ─────────────────────────────────────────────── */}
-      <MyNightDrawer isOpen={myNightOpen} onClose={() => setMyNightOpen(false)} />
+      {/* ── My Picks Drawer ─────────────────────────────────────────────── */}
+      <MyNightDrawer isOpen={myPicksOpen} onClose={() => setMyPicksOpen(false)} />
     </>
   );
 }

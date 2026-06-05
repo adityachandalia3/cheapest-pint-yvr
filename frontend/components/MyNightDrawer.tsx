@@ -19,11 +19,11 @@ export default function MyNightDrawer({
 
   async function handleShare() {
     const names = myNight.map(b => b.name).join(', ');
-    const text = `Here's my bar list for tonight 🍺 ${names} — built on pintmapyvr.com`;
+    const text = `Here's my bar list for tonight 🍺 ${names} — built on getbrewscanner.com`;
     if (navigator.share) {
-      await navigator.share({ title: 'My Night — Pint Map YVR', text, url: 'https://pintmapyvr.com' });
+      await navigator.share({ title: 'My Picks — Brewscanner', text, url: 'https://getbrewscanner.com' });
     } else {
-      await navigator.clipboard.writeText(text + '\nhttps://pintmapyvr.com');
+      await navigator.clipboard.writeText(text + '\nhttps://getbrewscanner.com');
     }
   }
 
@@ -81,7 +81,7 @@ function DrawerContent({
     <>
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-[#e8dcc8] shrink-0">
-        <h2 className="font-black text-[#1c1917] text-base">🎉 My Night</h2>
+        <h2 className="font-black text-[#1c1917] text-base">🍺 My Picks</h2>
         <div className="flex items-center gap-3">
           {myNight.length > 0 && (
             <button
@@ -106,10 +106,10 @@ function DrawerContent({
           <div className="flex flex-col items-center justify-center py-10 text-center">
             <span className="text-4xl mb-3">🍺</span>
             <p className="text-sm font-bold text-stone-500 leading-relaxed">
-              No bars saved yet
+              No picks yet
             </p>
             <p className="text-xs text-stone-400 mt-1 leading-relaxed">
-              Use Find Your Vibe or browse the map to add bars to your night
+              No picks yet — use Find Your Vibe or browse the map to add bars to your night
             </p>
           </div>
         ) : (
@@ -160,7 +160,7 @@ function DrawerContent({
             onClick={handleShare}
             className="flex items-center justify-center gap-2 w-full py-2.5 bg-white border border-[#e8dcc8] hover:border-[#B34207]/40 text-[#1c1917] font-black text-sm rounded-xl transition-colors"
           >
-            🔗 Share My Night
+            🔗 Share My Picks
           </button>
         </div>
       )}

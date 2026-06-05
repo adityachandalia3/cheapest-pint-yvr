@@ -284,7 +284,7 @@ export default function VibeSearch({
                             : 'bg-[#fef9f0] border-[#fde8c4] text-[#1c1917] hover:border-[#B34207]/40'
                         }`}
                       >
-                        {addedIds.has(r.bar_id) ? '✓ Added' : '+ My Night'}
+                        {addedIds.has(r.bar_id) ? '✓ Added' : '+ My Picks'}
                       </button>
                     )}
                     <button

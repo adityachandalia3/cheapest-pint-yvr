@@ -20,7 +20,7 @@ interface MyNightContextType {
 }
 
 const MyNightContext = createContext<MyNightContextType | null>(null);
-const STORAGE_KEY = 'myNight';
+const STORAGE_KEY = 'myPicks';
 
 export function MyNightProvider({ children }: { children: ReactNode }) {
   const [myNight, setMyNight] = useState<MyNightBar[]>([]);
@@ -40,7 +40,7 @@ export function MyNightProvider({ children }: { children: ReactNode }) {
 
   function addBar(bar: MyNightBar): 'added' | 'duplicate' {
     if (myNight.some(b => b.id === bar.id)) {
-      setToast('Already in My Night');
+      setToast('Already in My Picks');
       setTimeout(() => setToast(null), 2000);
       return 'duplicate';
     }
