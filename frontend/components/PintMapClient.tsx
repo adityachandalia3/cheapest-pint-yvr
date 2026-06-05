@@ -23,10 +23,19 @@ export default function PintMapClient({ initialBars }: { initialBars: Bar[] }) {
     happyHourOnly: false,
     sortBy: 'price',
   });
+  const [simulatedTime, setSimulatedTime] = useState<string | null>(null); // "HH:MM" or null = Now
   const [highlightedBarId, setHighlightedBarId] = useState<string | null>(null);
   const [hoveredBarId, setHoveredBarId] = useState<string | null>(null);
   const [vibeOpen, setVibeOpen] = useState(false);
   const [vibeQuery, setVibeQuery] = useState('');
+
+  const effectiveNow = useMemo(() => {
+    if (!simulatedTime) return now;
+    const [h, m] = simulatedTime.split(':').map(Number);
+    const d = new Date(now);
+    d.setHours(h, m, 0, 0);
+    return d;
+  }, [now, simulatedTime]);
 
   const mapRef = useRef<HTMLDivElement>(null);
   const leaderboardRef = useRef<HTMLDivElement>(null);
@@ -65,7 +74,7 @@ export default function PintMapClient({ initialBars }: { initialBars: Bar[] }) {
 
   const topThreeBars = useMemo(() => {
     return bars
-      .map(b => enrichBarWithActivePrice(b, now, 'cheapest_beer'))
+      .map(b => enrichBarWithActivePrice(b, effectiveNow, 'cheapest_beer'))
       .filter(b =>
         b.activePrice !== Infinity &&
         b.activePourSize !== null &&
@@ -73,11 +82,11 @@ export default function PintMapClient({ initialBars }: { initialBars: Bar[] }) {
       )
       .sort((a, b) => a.activePrice - b.activePrice)
       .slice(0, 3);
-  }, [bars, now]);
+  }, [bars, effectiveNow]);
 
   const filteredBars = useMemo(() => {
     return bars
-      .map(b => enrichBarWithActivePrice(b, now, filters.beerType))
+      .map(b => enrichBarWithActivePrice(b, effectiveNow, filters.beerType))
       .filter(b => {
         if (b.activePrice === Infinity) return false;
         if (b.activePourSize === null || !PINT_POUR_SIZES.has(b.activePourSize)) return false;
@@ -90,7 +99,7 @@ export default function PintMapClient({ initialBars }: { initialBars: Bar[] }) {
           ? a.name.localeCompare(b.name)
           : a.activePrice - b.activePrice
       );
-  }, [bars, now, filters]);
+  }, [bars, effectiveNow, filters]);
 
   const leaderboardBars = useMemo(() => filteredBars.slice(0, 10), [filteredBars]);
 
@@ -126,7 +135,11 @@ export default function PintMapClient({ initialBars }: { initialBars: Bar[] }) {
 
   return (
     <div className="min-h-screen bg-[#fef9f0] text-[#1c1917]" suppressHydrationWarning>
-      <HeroSection topBars={topThreeBars} />
+      <HeroSection
+        topBars={topThreeBars}
+        simulatedTime={simulatedTime}
+        onTimeChange={setSimulatedTime}
+      />
 
       {/* Find Your Vibe inline card */}
       <div className="px-4 pt-4 pb-1">

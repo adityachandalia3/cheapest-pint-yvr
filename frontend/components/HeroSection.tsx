@@ -27,12 +27,41 @@ function getCuratedPhoto(barName: string) {
   return CURATED_PHOTOS.find(p => barName.toLowerCase().includes(p.match))?.src ?? null;
 }
 
-export default function HeroSection({ topBars }: { topBars: BarWithActivePrice[] }) {
+function fmt12h(t: string): string {
+  const [h, m] = t.split(':').map(Number);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  return `${h % 12 || 12}:${m.toString().padStart(2, '0')} ${ampm}`;
+}
+
+export default function HeroSection({
+  topBars,
+  simulatedTime,
+  onTimeChange,
+}: {
+  topBars: BarWithActivePrice[];
+  simulatedTime?: string | null;
+  onTimeChange?: (t: string | null) => void;
+}) {
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
   const touchStartX = useRef<number | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [showInput, setShowInput] = useState(false);
+  const pickerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!pickerOpen) return;
+    function handler(e: MouseEvent) {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+        setPickerOpen(false);
+        setShowInput(false);
+      }
+    }
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [pickerOpen]);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -90,21 +119,89 @@ export default function HeroSection({ topBars }: { topBars: BarWithActivePrice[]
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
-      {/* Live label */}
-      <div className="flex items-center justify-center gap-2 pt-3 pb-2">
-        <span className="relative flex h-2 w-2 shrink-0">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
-        </span>
+      {/* Live label + time picker */}
+      <div className="flex items-center justify-center gap-2 pt-3 pb-1 flex-wrap">
+        {!simulatedTime && (
+          <span className="relative flex h-2 w-2 shrink-0">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+          </span>
+        )}
         <span className="text-[10px] font-black uppercase tracking-widest text-stone-500">
-          Cheapest pints in Vancouver right now
+          {simulatedTime
+            ? `Cheapest pints at ${fmt12h(simulatedTime)}`
+            : 'Cheapest pints in Vancouver right now'}
         </span>
+
+        {/* Time picker pill */}
+        <div ref={pickerRef} className="relative">
+          <button
+            onClick={() => { setPickerOpen(o => !o); setShowInput(false); }}
+            className={`flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full border transition-colors ${
+              simulatedTime
+                ? 'bg-amber-50 border-amber-300 text-amber-700'
+                : 'bg-white border-[#fde8c4] text-stone-400 hover:border-[#B34207]/40 hover:text-stone-600'
+            }`}
+          >
+            <span>⏰</span>
+            <span>{simulatedTime ? fmt12h(simulatedTime) : 'Now'}</span>
+          </button>
+
+          {pickerOpen && (
+            <div className="absolute top-full mt-1 right-0 bg-white border border-[#fde8c4] rounded-xl shadow-lg z-50 overflow-hidden min-w-[140px]">
+              <button
+                onMouseDown={() => {
+                  onTimeChange?.(null);
+                  setPickerOpen(false);
+                  setShowInput(false);
+                }}
+                className="w-full px-3 py-2 text-left text-xs font-semibold hover:bg-[#fff4e6] transition-colors text-[#1c1917] border-b border-[#fde8c4] flex items-center gap-2"
+              >
+                <span className="w-2 h-2 rounded-full bg-green-400 inline-block shrink-0" />
+                Right Now
+              </button>
+              {showInput ? (
+                <div className="px-3 py-2">
+                  <input
+                    type="time"
+                    autoFocus
+                    className="w-full text-xs border border-[#fde8c4] rounded-lg px-2 py-1.5 outline-none focus:border-[#B34207]/50 text-[#1c1917]"
+                    onChange={e => {
+                      if (e.target.value) {
+                        onTimeChange?.(e.target.value);
+                        setPickerOpen(false);
+                        setShowInput(false);
+                      }
+                    }}
+                  />
+                </div>
+              ) : (
+                <button
+                  onMouseDown={() => setShowInput(true)}
+                  className="w-full px-3 py-2 text-left text-xs font-semibold hover:bg-[#fff4e6] transition-colors text-[#1c1917] flex items-center gap-2"
+                >
+                  <span>🕐</span>
+                  Pick a Time
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Simulated time banner */}
+      {simulatedTime && (
+        <div className="mx-4 mb-1 px-3 py-1 rounded-lg bg-amber-50 border border-amber-200 text-center">
+          <span className="text-[10px] font-semibold text-amber-700">
+            Showing prices for {fmt12h(simulatedTime)} — prices may differ from current offers
+          </span>
+        </div>
+      )}
 
       {/* Carousel stage */}
       <div
         ref={containerRef}
-        className="relative w-full overflow-hidden h-[300px] md:h-[460px]"
+        className="relative w-full overflow-hidden h-[300px] md:h-[460px] mt-1"
         onTouchStart={e => { touchStartX.current = e.touches[0].clientX; }}
         onTouchEnd={e => {
           if (touchStartX.current === null) return;
