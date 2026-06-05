@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { IconBeer } from '@tabler/icons-react';
@@ -28,10 +28,12 @@ function Wordmark({ mobile }: { mobile?: boolean }) {
 export default function SiteNav() {
   const [vibeOpen, setVibeOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [desktopMoreOpen, setDesktopMoreOpen] = useState(false);
   const [myPicksOpen, setMyPicksOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const { myNight, addBar } = useMyNightContext();
+  const desktopMoreRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!moreOpen) return;
@@ -39,6 +41,17 @@ export default function SiteNav() {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [moreOpen]);
+
+  useEffect(() => {
+    if (!desktopMoreOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (desktopMoreRef.current && !desktopMoreRef.current.contains(e.target as Node)) {
+        setDesktopMoreOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [desktopMoreOpen]);
 
   const handleShowOnMap = (barId: string) => {
     if (pathname === '/') {
@@ -92,6 +105,47 @@ export default function SiteNav() {
         </Link>
 
         <nav className="flex items-center gap-1">
+          {/* More dropdown */}
+          <div ref={desktopMoreRef} className="relative">
+            <button
+              onClick={() => setDesktopMoreOpen(o => !o)}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-stone-600 hover:text-[#B34207] hover:bg-[#fde8c4]/40 transition-all text-sm font-semibold whitespace-nowrap"
+            >
+              More
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className={`transition-transform ${desktopMoreOpen ? 'rotate-180' : ''}`}>
+                <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+            {desktopMoreOpen && (
+              <div className="absolute right-0 top-full mt-1 w-52 bg-white rounded-xl border border-[#e8dcc8] shadow-lg shadow-black/10 overflow-hidden z-[100]">
+                {NAV_LINKS.map(link => link.comingSoon ? (
+                  <div
+                    key="world-cup"
+                    className="flex items-center justify-between px-4 py-3 text-stone-400 border-b border-[#fde8c4]/60 select-none"
+                  >
+                    <span className="flex items-center gap-2 text-sm font-semibold">
+                      <span>{link.emoji}</span>
+                      {link.label}
+                    </span>
+                    <span className="text-[10px] font-black bg-[#F5A623]/15 text-[#b45309] border border-[#F5A623]/30 px-1.5 py-0.5 rounded-full">
+                      Soon
+                    </span>
+                  </div>
+                ) : (
+                  <Link
+                    key={link.href}
+                    href={link.href!}
+                    onClick={() => setDesktopMoreOpen(false)}
+                    className="flex items-center gap-2 px-4 py-3 text-[#1c1917] text-sm font-semibold hover:bg-[#fef9f0] transition-colors border-b border-[#fde8c4]/60 last:border-0"
+                  >
+                    <span>{link.emoji}</span>
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* My Picks — icon + label on desktop */}
           <button
             onClick={() => setMyPicksOpen(true)}
