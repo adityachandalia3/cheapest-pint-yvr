@@ -4,6 +4,23 @@ import Anthropic from '@anthropic-ai/sdk';
 
 export const dynamic = 'force-dynamic';
 
+// Rate limiting: 10 crawl builds per IP per hour
+const rateLimit = new Map<string, { count: number; windowStart: number }>();
+const RATE_LIMIT_MAX = 10;
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = rateLimit.get(ip);
+  if (!entry || now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
+    rateLimit.set(ip, { count: 1, windowStart: now });
+    return true;
+  }
+  if (entry.count >= RATE_LIMIT_MAX) return false;
+  entry.count++;
+  return true;
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface RawBar {
@@ -338,6 +355,18 @@ const SELECT_FIELDS = `
 `;
 
 export async function POST(req: NextRequest) {
+  const ip =
+    req.headers.get('x-forwarded-for')?.split(',')[0].trim() ??
+    req.headers.get('x-real-ip') ??
+    'unknown';
+
+  if (!checkRateLimit(ip)) {
+    return NextResponse.json(
+      { error: 'Too many crawl builds. Try again in an hour.' },
+      { status: 429 }
+    );
+  }
+
   const body = await req.json();
   const { neighbourhood, fixedBarId, barCount, startTime, day, vibe, budget, happyHourOnly } = body as {
     neighbourhood?: string;
