@@ -1,7 +1,7 @@
 'use client';
 
 import { BarWithActivePrice } from '@/lib/types';
-import { getDisplayName } from '@/lib/priceUtils';
+import { getDisplayName, formatPourSize } from '@/lib/priceUtils';
 
 interface Props {
   bars: BarWithActivePrice[];
@@ -91,10 +91,17 @@ export default function Leaderboard({ bars, highlightedBarId, onBarClick, onBarH
                 </span>
               )}
 
-              {/* Price */}
-              <span className="shrink-0 text-base font-black tabular-nums text-[#B34207]">
-                ${bar.activePrice.toFixed(2)}
-              </span>
+              {/* Price + pour size */}
+              <div className="shrink-0 text-right">
+                <span className="text-base font-black tabular-nums text-[#B34207]">
+                  ${bar.activePrice.toFixed(2)}
+                </span>
+                {formatPourSize(bar.activePourSize) && (
+                  <p className="text-[10px] text-stone-400 font-semibold leading-none mt-0.5">
+                    {formatPourSize(bar.activePourSize)}
+                  </p>
+                )}
+              </div>
             </button>
           );
         })}

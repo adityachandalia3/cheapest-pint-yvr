@@ -289,8 +289,15 @@ export default function HeroSection({
 
                 {/* Card content */}
                 <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
-                  <div className="text-[2.5rem] md:text-[4.5rem] font-black leading-none tabular-nums">
-                    ${bar.activePrice.toFixed(2)}
+                  <div className="flex items-end gap-2 leading-none">
+                    <span className="text-[2.5rem] md:text-[4.5rem] font-black tabular-nums">
+                      ${bar.activePrice.toFixed(2)}
+                    </span>
+                    {formatPourSize(bar.activePourSize) && (
+                      <span className="text-sm font-bold opacity-60 mb-1.5 md:mb-3">
+                        {formatPourSize(bar.activePourSize)}
+                      </span>
+                    )}
                   </div>
                   <div className="text-base md:text-2xl font-black mt-1 leading-tight">
                     {getDisplayName(bar.name)}
@@ -300,7 +307,7 @@ export default function HeroSection({
                   </div>
                   {bar.activeBeerName && (
                     <div className="text-xs opacity-55 mt-0.5">
-                      {bar.activeBeerName}{formatPourSize(bar.activePourSize) ? ` · ${formatPourSize(bar.activePourSize)}` : ''}
+                      {bar.activeBeerName}
                     </div>
                   )}
                   {bar.isHappyHour && (
