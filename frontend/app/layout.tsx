@@ -4,6 +4,7 @@ import './globals.css';
 import SiteNav from '@/components/SiteNav';
 import SiteFooter from '@/components/SiteFooter';
 import AppProviders from '@/components/AppProviders';
+import { Analytics } from '@vercel/analytics/next';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
@@ -29,6 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <SiteFooter />
           </div>
         </AppProviders>
+        <Analytics />
       </body>
     </html>
   );
