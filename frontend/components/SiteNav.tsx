@@ -15,6 +15,7 @@ const NAV_LINKS = [
   { emoji: '📢', label: 'Advertise With Us', href: '/advertise', comingSoon: false },
   { emoji: '🍺', label: 'Submit a Price', href: '/submit-price', comingSoon: false },
   { emoji: 'ℹ️', label: 'About', href: '/about', comingSoon: false },
+  { emoji: '✉️', label: 'Contact Us', href: '/contact', comingSoon: false },
 ];
 
 function Wordmark({ mobile }: { mobile?: boolean }) {
