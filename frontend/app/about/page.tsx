@@ -21,7 +21,7 @@ export default function AboutPage() {
               Brewscanner scans 100+ bars across Vancouver to find you the cheapest pint in the city. No hunting. No guessing. Just the best deal, right now.
             </p>
             <p className="mt-3">
-              But we&apos;re not just a price list. We&apos;ve gone deeper. Find Your Vibe lets you describe the night you want in plain English — &quot;lively sports bar with friends&quot; or &quot;chill spot for a date&quot; — and we&apos;ll match you with bars that actually fit. Want to hop between spots? The Bar Crawl Builder plans a multi-stop night out, starting cheap and building toward wherever you want to end up. It&apos;s an immersive experience, not a database.
+              But we&apos;re not just a price list. We&apos;ve gone deeper. Find Your Vibe lets you describe the night you want — &quot;lively sports bar with friends&quot; or &quot;chill spot for a date&quot; — and we&apos;ll match you with bars that actually fit. Want to hop between spots? The Bar Crawl Builder plans a multi-stop night out, starting cheap and building toward wherever you want to end up. It&apos;s an immersive experience, not a database.
             </p>
           </div>
 
