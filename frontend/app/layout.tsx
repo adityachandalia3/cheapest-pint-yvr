@@ -5,6 +5,7 @@ import SiteNav from '@/components/SiteNav';
 import SiteFooter from '@/components/SiteFooter';
 import AppProviders from '@/components/AppProviders';
 import { Analytics } from '@vercel/analytics/next';
+import { PostHogProvider } from './providers';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
@@ -22,6 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className={`${inter.variable} font-sans antialiased bg-[#fef9f0]`}>
+        <PostHogProvider>
         <AppProviders>
           <SiteNav />
           {/* pb accounts for the fixed mobile bottom tab bar */}
@@ -30,6 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <SiteFooter />
           </div>
         </AppProviders>
+        </PostHogProvider>
         <Analytics />
       </body>
     </html>

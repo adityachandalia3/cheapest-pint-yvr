@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import dynamic from 'next/dynamic';
+import posthog from 'posthog-js';
 import type { CrawlResult } from '@/app/api/crawl-builder/route';
 import type { BarOption } from '@/app/crawl-builder/page';
 
@@ -155,6 +156,10 @@ export default function CrawlBuilderClient({
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       setCrawl(data.crawl);
+      posthog.capture('crawl_built', {
+        neighbourhood: data.crawl.neighbourhood,
+        stops: data.crawl.stops?.length ?? 0,
+      });
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Something went wrong. Try again.');
     } finally {

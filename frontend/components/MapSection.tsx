@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useEffect, useCallback } from 'react';
 import { GoogleMap, Marker, InfoWindow, useJsApiLoader } from '@react-google-maps/api';
+import posthog from 'posthog-js';
 import { BarWithActivePrice } from '@/lib/types';
 import { getActivePriceForPint } from '@/lib/priceUtils';
 
@@ -242,6 +243,7 @@ export default function MapSection({ bars, cheapestBarId, highlightedBarId, hove
                 )}&query_place_id=${selectedBar.google_place_id}`}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => posthog.capture('bar_directions', { bar_name: selectedBar.name })}
                 style={{
                   display: 'inline-block',
                   background: '#B34207',

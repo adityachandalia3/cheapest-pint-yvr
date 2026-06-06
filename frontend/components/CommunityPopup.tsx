@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import posthog from 'posthog-js';
 
 const STORAGE_KEY = 'popupShown';
 const AUTO_DELAY_MS = 30000;
@@ -54,6 +55,7 @@ export default function CommunityPopup({ manualOpen = false, onClose }: Props) {
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
+      posthog.capture('popup_signup');
       setDone(true);
       setTimeout(() => close(), 2500);
     } catch {

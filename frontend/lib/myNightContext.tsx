@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import posthog from 'posthog-js';
 
 export interface MyNightBar {
   id: string;
@@ -45,6 +46,7 @@ export function MyNightProvider({ children }: { children: ReactNode }) {
       return 'duplicate';
     }
     save([...myNight, bar]);
+    posthog.capture('mypicks_added', { bar_name: bar.name });
     return 'added';
   }
 

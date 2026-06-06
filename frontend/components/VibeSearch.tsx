@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
+import posthog from 'posthog-js';
 import type { Bar } from '@/lib/types';
 import type { MyNightBar } from '@/lib/myNightContext';
 
@@ -80,6 +81,7 @@ export default function VibeSearch({
     setLoading(true);
     setError(null);
     setResults(null);
+    posthog.capture('vibe_search', { query: q });
     try {
       const res = await fetch('/api/vibe-search', {
         method: 'POST',

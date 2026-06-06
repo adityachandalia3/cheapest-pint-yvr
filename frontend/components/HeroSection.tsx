@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
+import posthog from 'posthog-js';
 import { BarWithActivePrice } from '@/lib/types';
 import { formatPourSize, getDisplayName } from '@/lib/priceUtils';
 
@@ -325,6 +326,7 @@ export default function HeroSection({
                       onClick={async e => {
                         e.stopPropagation();
                         const shareText = `Found a $${bar.activePrice.toFixed(2)} pint in Vancouver 🍺 ${getDisplayName(bar.name)}${bar.neighbourhood ? ', ' + bar.neighbourhood : ''}. You're welcome. getbrewscanner.com`;
+                        posthog.capture('share_clicked', { feature: 'hero_carousel', bar_name: bar.name });
                         if (navigator.share) {
                           await navigator.share({ title: 'Cheapest Pint in Vancouver Right Now', text: shareText, url: 'https://getbrewscanner.com' });
                         } else {
