@@ -34,14 +34,29 @@ function fmt12h(t: string): string {
   return `${h % 12 || 12}:${m.toString().padStart(2, '0')} ${ampm}`;
 }
 
+const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+function triggerLabel(simulatedDay: number | null, simulatedTime: string | null): string {
+  const dayPart = simulatedDay !== null ? DAYS[simulatedDay] : null;
+  const timePart = simulatedTime ? fmt12h(simulatedTime) : null;
+  if (!dayPart && !timePart) return 'Right Now';
+  if (dayPart && !timePart) return `${dayPart} · Now`;
+  if (!dayPart && timePart) return `Today · ${timePart}`;
+  return `${dayPart} · ${timePart}`;
+}
+
 export default function HeroSection({
   topBars,
   simulatedTime,
+  simulatedDay,
   onTimeChange,
+  onDayChange,
 }: {
   topBars: BarWithActivePrice[];
   simulatedTime?: string | null;
+  simulatedDay?: number | null;
   onTimeChange?: (t: string | null) => void;
+  onDayChange?: (d: number | null) => void;
 }) {
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -139,40 +154,41 @@ export default function HeroSection({
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
-      {/* Live label + time picker */}
+      {/* Live label + unified day/time picker */}
       <div className="flex items-center justify-center gap-2 pt-3 pb-1 flex-wrap">
-        {!simulatedTime && (
+        {!simulatedTime && simulatedDay === null && (
           <span className="relative flex h-2 w-2 shrink-0">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
           </span>
         )}
         <span className="text-[10px] font-black uppercase tracking-widest text-stone-500">
-          {simulatedTime
-            ? `Cheapest pints at ${fmt12h(simulatedTime)}`
-            : 'Cheapest pints in Vancouver right now'}
+          Cheapest pints in Vancouver
         </span>
 
-        {/* Time picker pill */}
+        {/* Unified trigger pill */}
         <div ref={pickerRef} className="relative">
           <button
             onClick={() => setPickerOpen(o => !o)}
-            className={`flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full border transition-colors ${
-              simulatedTime
-                ? 'bg-amber-50 border-amber-300 text-amber-700'
-                : 'bg-white border-[#fde8c4] text-stone-400 hover:border-[#B34207]/40 hover:text-stone-600'
+            className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full border shadow-sm transition-all ${
+              simulatedTime || simulatedDay !== null
+                ? 'bg-amber-100 border-amber-400 text-amber-800'
+                : 'bg-white border-[#B34207]/40 text-[#B34207] hover:bg-[#B34207]/5 hover:border-[#B34207]/60'
             }`}
           >
             <span>⏰</span>
-            <span>{simulatedTime ? fmt12h(simulatedTime) : 'Now'}</span>
+            <span>{triggerLabel(simulatedDay ?? null, simulatedTime ?? null)}</span>
+            <span className="opacity-70 text-[10px]">▾</span>
           </button>
 
           {pickerOpen && (
-            <div className="absolute top-full mt-1 right-0 bg-white border border-[#fde8c4] rounded-xl shadow-lg z-50 overflow-hidden min-w-[170px]">
+            <div className="absolute top-full mt-1 right-0 bg-white border border-[#fde8c4] rounded-xl shadow-lg z-50 overflow-hidden min-w-[200px]">
+              {/* Reset */}
               <button
                 onMouseDown={e => {
                   e.preventDefault();
                   onTimeChange?.(null);
+                  onDayChange?.(null);
                   setPendingTime('');
                   setPickerOpen(false);
                 }}
@@ -181,8 +197,30 @@ export default function HeroSection({
                 <span className="w-2 h-2 rounded-full bg-green-400 inline-block shrink-0" />
                 Right Now
               </button>
-              <div className="px-3 py-2.5">
-                <p className="text-[9px] font-black uppercase tracking-widest text-stone-400 mb-1.5">Pick a time</p>
+
+              {/* Day selector */}
+              <div className="px-3 pt-2.5 pb-1">
+                <p className="text-[9px] font-black uppercase tracking-widest text-stone-400 mb-1.5">Day</p>
+                <div className="grid grid-cols-4 gap-1">
+                  {DAYS.map((d, i) => (
+                    <button
+                      key={d}
+                      onMouseDown={e => { e.preventDefault(); onDayChange?.(simulatedDay === i ? null : i); }}
+                      className={`text-[10px] font-bold py-1 rounded-lg border transition-colors ${
+                        simulatedDay === i
+                          ? 'bg-[#B34207] text-white border-[#B34207]'
+                          : 'bg-[#fef9f0] text-stone-500 border-[#fde8c4] hover:border-[#B34207]/40'
+                      }`}
+                    >
+                      {d}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Time picker */}
+              <div className="px-3 py-2.5 border-t border-[#fde8c4]">
+                <p className="text-[9px] font-black uppercase tracking-widest text-stone-400 mb-1.5">Time</p>
                 <div className="flex gap-1.5">
                   <input
                     type="time"
@@ -217,11 +255,11 @@ export default function HeroSection({
         </div>
       </div>
 
-      {/* Simulated time banner */}
-      {simulatedTime && (
+      {/* Simulated time/day banner */}
+      {(simulatedTime || simulatedDay !== null) && (
         <div className="mx-4 mb-1 px-3 py-1 rounded-lg bg-amber-50 border border-amber-200 text-center">
           <span className="text-[10px] font-semibold text-amber-700">
-            Showing prices for {fmt12h(simulatedTime)} — prices may differ from current offers
+            Showing prices for {triggerLabel(simulatedDay ?? null, simulatedTime ?? null)} — prices may differ from current offers
           </span>
         </div>
       )}

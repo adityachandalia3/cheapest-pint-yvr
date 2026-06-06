@@ -25,6 +25,7 @@ export default function PintMapClient({ initialBars }: { initialBars: Bar[] }) {
     sortBy: 'price',
   });
   const [simulatedTime, setSimulatedTime] = useState<string | null>(null); // "HH:MM" or null = Now
+  const [simulatedDay, setSimulatedDay] = useState<number | null>(null);  // 0=Sun…6=Sat or null = today
   const [highlightedBarId, setHighlightedBarId] = useState<string | null>(null);
   const [hoveredBarId, setHoveredBarId] = useState<string | null>(null);
   const [vibeOpen, setVibeOpen] = useState(false);
@@ -32,12 +33,17 @@ export default function PintMapClient({ initialBars }: { initialBars: Bar[] }) {
   const { addBar } = useMyNightContext();
 
   const effectiveNow = useMemo(() => {
-    if (!simulatedTime) return now;
-    const [h, m] = simulatedTime.split(':').map(Number);
     const d = new Date(now);
-    d.setHours(h, m, 0, 0);
+    if (simulatedDay !== null) {
+      const diff = simulatedDay - d.getDay();
+      d.setDate(d.getDate() + diff);
+    }
+    if (simulatedTime) {
+      const [h, m] = simulatedTime.split(':').map(Number);
+      d.setHours(h, m, 0, 0);
+    }
     return d;
-  }, [now, simulatedTime]);
+  }, [now, simulatedTime, simulatedDay]);
 
   const mapRef = useRef<HTMLDivElement>(null);
   const leaderboardRef = useRef<HTMLDivElement>(null);
@@ -140,7 +146,9 @@ export default function PintMapClient({ initialBars }: { initialBars: Bar[] }) {
       <HeroSection
         topBars={topThreeBars}
         simulatedTime={simulatedTime}
+        simulatedDay={simulatedDay}
         onTimeChange={setSimulatedTime}
+        onDayChange={setSimulatedDay}
       />
 
       {/* Find Your Vibe inline card */}
