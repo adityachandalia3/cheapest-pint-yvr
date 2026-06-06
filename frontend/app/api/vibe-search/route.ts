@@ -8,6 +8,23 @@ export const dynamic = 'force-dynamic';
 
 const cache = new Map<string, { data: unknown; expiresAt: number }>();
 
+// Rate limiting: 15 unique queries per IP per hour
+const rateLimit = new Map<string, { count: number; windowStart: number }>();
+const RATE_LIMIT_MAX = 15;
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = rateLimit.get(ip);
+  if (!entry || now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
+    rateLimit.set(ip, { count: 1, windowStart: now });
+    return true;
+  }
+  if (entry.count >= RATE_LIMIT_MAX) return false;
+  entry.count++;
+  return true;
+}
+
 type DbPintPrice = {
   category: string;
   price_cad: number;
@@ -50,10 +67,26 @@ Prices: ${prices}`;
 }
 
 export async function POST(req: NextRequest) {
+  const ip =
+    req.headers.get('x-forwarded-for')?.split(',')[0].trim() ??
+    req.headers.get('x-real-ip') ??
+    'unknown';
+
+  if (!checkRateLimit(ip)) {
+    return NextResponse.json(
+      { error: 'Too many searches. Try again in an hour.' },
+      { status: 429 }
+    );
+  }
+
   const body = await req.json();
   const query: string = body?.query?.trim();
   if (!query) {
     return NextResponse.json({ error: 'Query required' }, { status: 400 });
+  }
+
+  if (query.length > 300) {
+    return NextResponse.json({ error: 'Query too long.' }, { status: 400 });
   }
 
   const cacheKey = query.toLowerCase();
@@ -115,7 +148,12 @@ Respond with ONLY valid JSON, no markdown fences:
   let raw = (message.content[0] as { type: string; text: string }).text.trim();
   raw = raw.replace(/^```json\s*/m, '').replace(/^```\s*/m, '').replace(/\s*```\s*$/m, '');
 
-  const recommendations: Array<{ bar_id: string; match_reason: string }> = JSON.parse(raw);
+  let recommendations: Array<{ bar_id: string; match_reason: string }>;
+  try {
+    recommendations = JSON.parse(raw);
+  } catch {
+    return NextResponse.json({ error: 'Something went wrong. Please try again.' }, { status: 500 });
+  }
 
   const now = new Date();
 
