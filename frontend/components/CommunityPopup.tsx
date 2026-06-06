@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import posthog from 'posthog-js';
 
 const STORAGE_KEY = 'popupShown';
-const AUTO_DELAY_MS = 30000;
+const AUTO_DELAY_MS = 15000;
 
 interface Props {
   manualOpen?: boolean;
