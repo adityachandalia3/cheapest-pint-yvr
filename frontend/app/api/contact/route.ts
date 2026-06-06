@@ -24,7 +24,7 @@ export async function POST(req: Request) {
 
   try {
     await resend.emails.send({
-      from: 'Brewscanner <noreply@getbrewscanner.com>',
+      from: 'Brewscanner <onboarding@resend.dev>',
       to,
       replyTo: email,
       subject: subjectLine,
