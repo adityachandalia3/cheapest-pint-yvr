@@ -5,6 +5,7 @@ import SiteNav from '@/components/SiteNav';
 import SiteFooter from '@/components/SiteFooter';
 import AppProviders from '@/components/AppProviders';
 import InstallBanner from '@/components/InstallBanner';
+import PwaTracker from '@/components/PwaTracker';
 import { Analytics } from '@vercel/analytics/next';
 import { PostHogProvider } from './providers';
 
@@ -55,6 +56,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </PostHogProvider>
         <Analytics />
         <InstallBanner />
+        <PwaTracker />
       </body>
     </html>
   );

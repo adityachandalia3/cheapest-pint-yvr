@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import posthog from 'posthog-js';
 import { installPrompt } from '@/lib/installPrompt';
 
 function detectPlatform(): 'ios' | 'android' | 'other' {
@@ -47,7 +48,15 @@ export default function InstallClient() {
       installPrompt.set(e);
     };
     window.addEventListener('beforeinstallprompt', handler);
-    return () => window.removeEventListener('beforeinstallprompt', handler);
+
+    // Track when browser confirms the install completed (Android)
+    const onInstalled = () => posthog.capture('pwa_app_installed');
+    window.addEventListener('appinstalled', onInstalled);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler);
+      window.removeEventListener('appinstalled', onInstalled);
+    };
   }, []);
 
   async function handleInstall() {
@@ -56,6 +65,7 @@ export default function InstallClient() {
     await prompt.prompt();
     const { outcome } = await prompt.userChoice;
     if (outcome === 'accepted') {
+      posthog.capture('pwa_install_accepted');
       installPrompt.clear();
       setInstalled(true);
     }
