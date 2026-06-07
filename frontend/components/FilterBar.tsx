@@ -6,6 +6,9 @@ interface Props {
   filters: Filters;
   onFiltersChange: (f: Filters) => void;
   neighbourhoods: string[];
+  nearMe?: boolean;
+  nearMeLoading?: boolean;
+  onNearMeToggle?: () => void;
 }
 
 const BEER_TYPES: { value: BeerCategory; label: string }[] = [
@@ -22,13 +25,22 @@ function pill(active: boolean) {
   }`;
 }
 
-export default function FilterBar({ filters, onFiltersChange, neighbourhoods }: Props) {
+export default function FilterBar({ filters, onFiltersChange, neighbourhoods, nearMe, nearMeLoading, onNearMeToggle }: Props) {
   return (
     <div className="bg-white border-b border-[#e8dcc8]">
       <div
         className="flex gap-2 px-4 py-2.5 overflow-x-auto"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
       >
+        {/* Near Me */}
+        <button
+          onClick={onNearMeToggle}
+          disabled={nearMeLoading}
+          className={pill(!!nearMe || !!nearMeLoading)}
+        >
+          {nearMeLoading ? '⏳ Locating…' : '📍 Near Me'}
+        </button>
+
         {/* Neighbourhood — pill wrapping a transparent native select */}
         <div className="relative shrink-0">
           <span className={pill(!!filters.neighbourhood)}>

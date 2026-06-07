@@ -51,12 +51,20 @@ export default function HeroSection({
   simulatedDay,
   onTimeChange,
   onDayChange,
+  nearMeActive,
+  nearMeFallback,
+  onNearMeToggle,
+  nearMeLoading,
 }: {
   topBars: BarWithActivePrice[];
   simulatedTime?: string | null;
   simulatedDay?: number | null;
   onTimeChange?: (t: string | null) => void;
   onDayChange?: (d: number | null) => void;
+  nearMeActive?: boolean;
+  nearMeFallback?: boolean;
+  onNearMeToggle?: () => void;
+  nearMeLoading?: boolean;
 }) {
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -64,11 +72,13 @@ export default function HeroSection({
   const [containerWidth, setContainerWidth] = useState(0);
   const touchStartX = useRef<number | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [locationPickerOpen, setLocationPickerOpen] = useState(false);
   const [pendingTime, setPendingTime] = useState(simulatedTime ?? '');
   const [timeError, setTimeError] = useState('');
   const [shareOpenIdx, setShareOpenIdx] = useState<number | null>(null);
   const [shareCopied, setShareCopied] = useState(false);
   const shareRef = useRef<HTMLDivElement>(null);
+  const locationPickerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (shareOpenIdx === null) return;
@@ -97,6 +107,17 @@ export default function HeroSection({
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [pickerOpen]);
+
+  useEffect(() => {
+    if (!locationPickerOpen) return;
+    function handler(e: MouseEvent) {
+      if (locationPickerRef.current && !locationPickerRef.current.contains(e.target as Node)) {
+        setLocationPickerOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [locationPickerOpen]);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -154,8 +175,8 @@ export default function HeroSection({
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
-      {/* Live label + unified day/time picker */}
-      <div className="flex items-center justify-center gap-2 pt-3 pb-1 flex-wrap">
+      {/* Live label + location picker + time picker */}
+      <div className="flex items-center justify-center gap-1.5 pt-3 pb-1 flex-wrap">
         {!simulatedTime && simulatedDay === null && (
           <span className="relative flex h-2 w-2 shrink-0">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
@@ -163,22 +184,67 @@ export default function HeroSection({
           </span>
         )}
         <span className="text-[10px] font-black uppercase tracking-widest text-stone-500">
-          Cheapest pints in Vancouver
+          Cheapest pints
         </span>
 
-        {/* Unified trigger pill */}
+        {/* Location picker pill */}
+        <div ref={locationPickerRef} className="relative">
+          <button
+            onClick={() => setLocationPickerOpen(o => !o)}
+            className={`flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full border transition-colors ${
+              nearMeActive || nearMeLoading
+                ? 'bg-amber-50 border-amber-300 text-amber-700'
+                : 'bg-white border-[#fde8c4] text-stone-400 hover:border-[#B34207]/40 hover:text-stone-600'
+            }`}
+          >
+            <span>{nearMeLoading ? '⏳' : nearMeActive ? '📍' : '🌐'}</span>
+            <span>{nearMeLoading ? 'Locating…' : nearMeActive ? 'Near You' : 'in Vancouver'}</span>
+            <span className="opacity-60">▾</span>
+          </button>
+
+          {locationPickerOpen && (
+            <div className="absolute top-full mt-1 left-0 bg-white border border-[#fde8c4] rounded-xl shadow-lg z-50 overflow-hidden min-w-[150px]">
+              <button
+                onMouseDown={e => {
+                  e.preventDefault();
+                  if (nearMeActive) onNearMeToggle?.();
+                  setLocationPickerOpen(false);
+                }}
+                className={`w-full px-3 py-2 text-left text-xs font-semibold transition-colors flex items-center gap-2 ${
+                  !nearMeActive ? 'text-[#B34207] bg-[#fff4e6]' : 'text-[#1c1917] hover:bg-[#fff4e6]'
+                }`}
+              >
+                <span>🌐</span> in Vancouver
+              </button>
+              <button
+                onMouseDown={e => {
+                  e.preventDefault();
+                  if (!nearMeActive) onNearMeToggle?.();
+                  setLocationPickerOpen(false);
+                }}
+                className={`w-full px-3 py-2 text-left text-xs font-semibold transition-colors flex items-center gap-2 border-t border-[#fde8c4] ${
+                  nearMeActive ? 'text-[#B34207] bg-[#fff4e6]' : 'text-[#1c1917] hover:bg-[#fff4e6]'
+                }`}
+              >
+                <span>📍</span> Near You
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Time picker pill */}
         <div ref={pickerRef} className="relative">
           <button
             onClick={() => setPickerOpen(o => !o)}
-            className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full border shadow-sm transition-all ${
+            className={`flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full border transition-colors ${
               simulatedTime || simulatedDay !== null
-                ? 'bg-amber-100 border-amber-400 text-amber-800'
-                : 'bg-white border-[#B34207]/40 text-[#B34207] hover:bg-[#B34207]/5 hover:border-[#B34207]/60'
+                ? 'bg-amber-50 border-amber-300 text-amber-700'
+                : 'bg-white border-[#fde8c4] text-stone-400 hover:border-[#B34207]/40 hover:text-stone-600'
             }`}
           >
             <span>⏰</span>
             <span>{triggerLabel(simulatedDay ?? null, simulatedTime ?? null)}</span>
-            <span className="opacity-70 text-[10px]">▾</span>
+            <span className="opacity-60">▾</span>
           </button>
 
           {pickerOpen && (
@@ -321,7 +387,9 @@ export default function HeroSection({
                 {/* Rank badge */}
                 <div className="absolute top-3 left-3">
                   <span className={`inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${medal.badge}`}>
-                    {medal.emoji} #{medal.rank} Cheapest
+                    {nearMeActive && medal.rank === 1
+                      ? '📍 Cheapest Near You'
+                      : `${medal.emoji} #${medal.rank} Cheapest`}
                   </span>
                 </div>
 
@@ -343,6 +411,11 @@ export default function HeroSection({
                   <div className="text-sm font-semibold opacity-75 mt-0.5">
                     {bar.neighbourhood ?? ''}
                   </div>
+                  {nearMeFallback && (
+                    <div className="text-[10px] opacity-60 mt-0.5">
+                      No bars within 2km — showing cheapest in Vancouver
+                    </div>
+                  )}
                   {bar.activeBeerName && (
                     <div className="text-xs opacity-55 mt-0.5">
                       {bar.activeBeerName}

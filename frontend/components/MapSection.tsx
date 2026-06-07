@@ -15,6 +15,7 @@ interface Props {
   onBarSelect: (id: string | null) => void;
   className?: string;
   showResetView?: boolean;
+  userLocation?: { lat: number; lng: number } | null;
 }
 
 const VANCOUVER_CENTER = { lat: 49.2827, lng: -123.1207 };
@@ -52,7 +53,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   cheapest_ipa: '🟡 IPA',
 };
 
-export default function MapSection({ bars, cheapestBarId, highlightedBarId, hoveredBarId, ranks, onBarSelect, className, showResetView }: Props) {
+export default function MapSection({ bars, cheapestBarId, highlightedBarId, hoveredBarId, ranks, onBarSelect, className, showResetView, userLocation }: Props) {
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '',
@@ -100,8 +101,24 @@ export default function MapSection({ bars, cheapestBarId, highlightedBarId, hove
     return cache;
   }, [isLoaded]);
 
+  const userLocationIcon = useMemo(() => {
+    if (!isLoaded) return undefined;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 22 22"><circle cx="11" cy="11" r="10" fill="#4285F4" stroke="white" stroke-width="2.5"/><circle cx="11" cy="11" r="4.5" fill="white" fill-opacity="0.6"/></svg>`;
+    return {
+      url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+      scaledSize: new window.google.maps.Size(22, 22),
+      anchor: new window.google.maps.Point(11, 11),
+    };
+  }, [isLoaded]);
+
   const onLoad = useCallback((mapInstance: google.maps.Map) => setMap(mapInstance), []);
   const onUnmount = useCallback(() => setMap(null), []);
+
+  useEffect(() => {
+    if (!map || !userLocation) return;
+    map.panTo({ lat: userLocation.lat, lng: userLocation.lng });
+    map.setZoom(14);
+  }, [map, userLocation]);
 
   useEffect(() => {
     if (!map || !highlightedBarId) return;
@@ -157,6 +174,15 @@ export default function MapSection({ bars, cheapestBarId, highlightedBarId, hove
         onLoad={onLoad}
         onUnmount={onUnmount}
       >
+        {userLocation && (
+          <Marker
+            position={userLocation}
+            icon={userLocationIcon}
+            title="Your location"
+            zIndex={20}
+          />
+        )}
+
         {bars.map(bar => {
           if (!bar.latitude || !bar.longitude) return null;
           if (haversineKm(VANCOUVER_CENTER.lat, VANCOUVER_CENTER.lng, bar.latitude, bar.longitude) > MAX_MARKER_KM) return null;

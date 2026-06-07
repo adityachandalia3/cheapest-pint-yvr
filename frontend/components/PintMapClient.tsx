@@ -6,6 +6,7 @@ import HeroSection from './HeroSection';
 import FilterBar from './FilterBar';
 import VibeSearch, { VIBE_CHIPS } from './VibeSearch';
 import { useMyNightContext } from '@/lib/myNightContext';
+import { useNearMe } from '@/lib/useNearMe';
 
 const Leaderboard = dynamic(() => import('./Leaderboard'), { ssr: false });
 const MapSection = dynamic(() => import('./MapSection'), { ssr: false });
@@ -24,13 +25,15 @@ export default function PintMapClient({ initialBars }: { initialBars: Bar[] }) {
     happyHourOnly: false,
     sortBy: 'price',
   });
-  const [simulatedTime, setSimulatedTime] = useState<string | null>(null); // "HH:MM" or null = Now
-  const [simulatedDay, setSimulatedDay] = useState<number | null>(null);  // 0=Sun…6=Sat or null = today
+  const [simulatedTime, setSimulatedTime] = useState<string | null>(null);
+  const [simulatedDay, setSimulatedDay] = useState<number | null>(null);
   const [highlightedBarId, setHighlightedBarId] = useState<string | null>(null);
   const [hoveredBarId, setHoveredBarId] = useState<string | null>(null);
   const [vibeOpen, setVibeOpen] = useState(false);
   const [vibeQuery, setVibeQuery] = useState('');
   const { addBar } = useMyNightContext();
+
+  const nearMe = useNearMe(bars);
 
   const effectiveNow = useMemo(() => {
     const d = new Date(now);
@@ -65,7 +68,6 @@ export default function PintMapClient({ initialBars }: { initialBars: Bar[] }) {
     return () => clearInterval(refresh);
   }, []);
 
-  // Listen for show-on-map events from SiteNav's VibeSearch
   const handleBarCardClick = useCallback((barId: string) => {
     setHighlightedBarId(barId);
     mapRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -92,6 +94,29 @@ export default function PintMapClient({ initialBars }: { initialBars: Bar[] }) {
       .slice(0, 3);
   }, [bars, effectiveNow]);
 
+  // Cheapest bars near the user — only computed when Near Me is active with a known radius
+  const nearTopBars = useMemo(() => {
+    if (!nearMe.isActive || nearMe.nearbyBarIds === null) return null;
+    return bars
+      .map(b => enrichBarWithActivePrice(b, effectiveNow, 'cheapest_beer'))
+      .filter(b =>
+        b.activePrice !== Infinity &&
+        b.activePourSize !== null &&
+        PINT_POUR_SIZES.has(b.activePourSize) &&
+        nearMe.nearbyBarIds!.has(b.id)
+      )
+      .sort((a, b) => a.activePrice - b.activePrice)
+      .slice(0, 3);
+  }, [bars, effectiveNow, nearMe.isActive, nearMe.nearbyBarIds]);
+
+  // Show nearby bars in hero only when radius ≤ 2km
+  const heroNearMeActive = nearMe.isActive && !!nearMe.radiusKm && nearMe.radiusKm <= 2;
+  // Show Vancouver fallback note when Near Me active but radius > 2km or all-Vancouver fallback
+  const heroNearMeFallback = nearMe.isActive && (!nearMe.radiusKm || nearMe.radiusKm > 2);
+  const heroTopBars = heroNearMeActive && nearTopBars && nearTopBars.length > 0
+    ? nearTopBars
+    : topThreeBars;
+
   const filteredBars = useMemo(() => {
     return bars
       .map(b => enrichBarWithActivePrice(b, effectiveNow, filters.beerType))
@@ -100,6 +125,8 @@ export default function PintMapClient({ initialBars }: { initialBars: Bar[] }) {
         if (b.activePourSize === null || !PINT_POUR_SIZES.has(b.activePourSize)) return false;
         if (filters.neighbourhood && b.neighbourhood !== filters.neighbourhood) return false;
         if (filters.happyHourOnly && !b.isHappyHour) return false;
+        // Near Me filter — nearbyBarIds null means all-Vancouver fallback (no extra filter)
+        if (nearMe.isActive && nearMe.nearbyBarIds !== null && !nearMe.nearbyBarIds.has(b.id)) return false;
         return true;
       })
       .sort((a, b) =>
@@ -107,9 +134,29 @@ export default function PintMapClient({ initialBars }: { initialBars: Bar[] }) {
           ? a.name.localeCompare(b.name)
           : a.activePrice - b.activePrice
       );
-  }, [bars, effectiveNow, filters]);
+  }, [bars, effectiveNow, filters, nearMe.isActive, nearMe.nearbyBarIds]);
 
   const leaderboardBars = useMemo(() => filteredBars.slice(0, 10), [filteredBars]);
+
+  // Bars that pass all filters but are NOT nearby — shown below the divider when Near Me is active
+  const remainingBars = useMemo(() => {
+    if (!nearMe.isActive || nearMe.nearbyBarIds === null) return [];
+    return bars
+      .map(b => enrichBarWithActivePrice(b, effectiveNow, filters.beerType))
+      .filter(b => {
+        if (b.activePrice === Infinity) return false;
+        if (b.activePourSize === null || !PINT_POUR_SIZES.has(b.activePourSize)) return false;
+        if (filters.neighbourhood && b.neighbourhood !== filters.neighbourhood) return false;
+        if (filters.happyHourOnly && !b.isHappyHour) return false;
+        return !nearMe.nearbyBarIds!.has(b.id);
+      })
+      .sort((a, b) =>
+        filters.sortBy === 'name'
+          ? a.name.localeCompare(b.name)
+          : a.activePrice - b.activePrice
+      )
+      .slice(0, 10);
+  }, [bars, effectiveNow, filters, nearMe.isActive, nearMe.nearbyBarIds]);
 
   const leaderboardRanks = useMemo(() => {
     const map: Record<string, number> = {};
@@ -128,14 +175,12 @@ export default function PintMapClient({ initialBars }: { initialBars: Bar[] }) {
       .sort();
   }, [bars]);
 
-  // Map pin click → scroll down to leaderboard
   const handleMapPinClick = useCallback((barId: string | null) => {
     if (!barId) return;
     setHighlightedBarId(barId);
     leaderboardRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, []);
 
-  // Leaderboard row click → scroll up to map
   const handleLeaderboardRowClick = useCallback((barId: string) => {
     setHighlightedBarId(barId);
     mapRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -144,11 +189,15 @@ export default function PintMapClient({ initialBars }: { initialBars: Bar[] }) {
   return (
     <div className="min-h-screen bg-[#fef9f0] text-[#1c1917]" suppressHydrationWarning>
       <HeroSection
-        topBars={topThreeBars}
+        topBars={heroTopBars}
         simulatedTime={simulatedTime}
         simulatedDay={simulatedDay}
         onTimeChange={setSimulatedTime}
         onDayChange={setSimulatedDay}
+        nearMeActive={heroNearMeActive}
+        nearMeFallback={heroNearMeFallback}
+        onNearMeToggle={nearMe.toggle}
+        nearMeLoading={nearMe.isLoading}
       />
 
       {/* Find Your Vibe inline card */}
@@ -204,12 +253,15 @@ export default function PintMapClient({ initialBars }: { initialBars: Bar[] }) {
         </div>
       </div>
 
-      {/* FilterBar — sticky, sits below top nav on both mobile and desktop */}
+      {/* FilterBar */}
       <div className="sticky top-12 md:top-14 z-40">
         <FilterBar
           filters={filters}
           onFiltersChange={setFilters}
           neighbourhoods={neighbourhoods}
+          nearMe={nearMe.isActive}
+          nearMeLoading={nearMe.isLoading}
+          onNearMeToggle={nearMe.toggle}
         />
       </div>
 
@@ -229,6 +281,8 @@ export default function PintMapClient({ initialBars }: { initialBars: Bar[] }) {
           hoveredBarId={hoveredBarId}
           ranks={leaderboardRanks}
           onBarSelect={handleMapPinClick}
+          userLocation={nearMe.userLocation}
+          showResetView
         />
       </div>
 
@@ -239,6 +293,11 @@ export default function PintMapClient({ initialBars }: { initialBars: Bar[] }) {
           highlightedBarId={highlightedBarId}
           onBarClick={handleLeaderboardRowClick}
           onBarHover={setHoveredBarId}
+          nearMeActive={nearMe.isActive}
+          nearMeRadiusKm={nearMe.radiusKm}
+          nearMeExpandedFrom={nearMe.expandedFrom}
+          nearMeFallback={nearMe.isActive && nearMe.nearbyBarIds === null}
+          remainingBars={remainingBars}
         />
       </div>
 
@@ -264,6 +323,12 @@ export default function PintMapClient({ initialBars }: { initialBars: Bar[] }) {
         }}
       />
 
+      {/* Near Me toast */}
+      {nearMe.toast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-[#1c1917] text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-lg pointer-events-none">
+          📍 {nearMe.toast}
+        </div>
+      )}
     </div>
   );
 }

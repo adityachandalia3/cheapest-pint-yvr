@@ -82,9 +82,14 @@ export function enrichBarWithActivePrice(
   now?: Date,
   category?: BeerCategory
 ): BarWithActivePrice {
-  const prices = category
+  let prices = category
     ? (bar.pint_prices ?? []).filter(p => p.category === category)
     : (bar.pint_prices ?? []);
+
+  // If no entries for the requested category, fall back to cheapest across all categories
+  if (category && prices.length === 0) {
+    prices = bar.pint_prices ?? [];
+  }
 
   let activePrice = Infinity;
   let activeBeerName: string | null = null;
