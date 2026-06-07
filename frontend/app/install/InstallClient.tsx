@@ -171,13 +171,13 @@ export default function InstallClient() {
                   />
                   <Step
                     n={2}
-                    text='Tap the three-dot menu at the bottom right'
-                    sub='The ⋯ icon in the bottom toolbar'
+                    text='Tap the Share button at the top right'
+                    sub='The box with an upward arrow — next to the address bar'
                   />
                   <Step
                     n={3}
                     text='Tap "Add to Home Screen"'
-                    sub="Scroll the menu if you don't see it immediately"
+                    sub="Scroll down in the share sheet if you don't see it"
                   />
                   <Step
                     n={4}
