@@ -214,7 +214,7 @@ export default function BarMapClient({ initialBars }: { initialBars: Bar[] }) {
           /* Near Me grid — sorted by distance, includes no-price bars */
           <>
             <div className="grid grid-cols-3 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
-              {visibleBars.map((bar, idx) => {
+              {visibleBars.map((bar) => {
                 const b = bar as typeof bar & { distKm: number };
                 const hasPrice = b.activePrice !== Infinity;
                 const isHighlighted = b.id === highlightedBarId;
