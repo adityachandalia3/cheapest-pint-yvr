@@ -1,0 +1,23 @@
+{
+  "name": "Brewscanner",
+  "short_name": "Brewscanner",
+  "description": "Find the cheapest pint in Vancouver",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#faf5eb",
+  "theme_color": "#B34207",
+  "icons": [
+    {
+      "src": "/web-app-manifest-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/web-app-manifest-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
