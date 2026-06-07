@@ -143,24 +143,24 @@ export default function InstallClient() {
                   />
                   <Step
                     n={2}
-                    text='Tap the Share button at the bottom'
-                    sub='The square with an arrow pointing up — in the middle of the bottom toolbar'
+                    text='Tap the ••• button at the bottom of the screen'
+                    sub='The three-dot button in the bottom toolbar'
                   />
                   <Step
                     n={3}
-                    text='Scroll down and tap "Add to Home Screen"'
-                    sub='You may need to scroll the list of options to find it'
+                    text='Tap "Share"'
+                    sub='This opens the share sheet'
                   />
                   <Step
                     n={4}
+                    text='Tap "Add to Home Screen"'
+                    sub="If you don't see it, tap View More to find it in the list"
+                  />
+                  <Step
+                    n={5}
                     text='Tap "Add" in the top right corner'
                     sub='Brewscanner will appear on your home screen like an app'
                   />
-                  <div className="bg-[#fef9f0] rounded-xl p-3 border border-[#fde8c4]">
-                    <p className="text-xs text-stone-500 leading-relaxed">
-                      💡 The Share button looks like <span className="font-black text-[#1c1917]">⬆</span> — a box with an upward arrow, in the middle of the bottom bar.
-                    </p>
-                  </div>
                 </>
               ) : (
                 <>
