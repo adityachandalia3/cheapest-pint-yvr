@@ -51,7 +51,7 @@ export default function InstallBanner() {
 
   return (
     <div className="fixed bottom-[72px] md:bottom-4 left-1/2 -translate-x-1/2 z-[200] w-[calc(100%-2rem)] max-w-sm">
-      <Link href="/install" className="block">
+      <Link href="/install" className="block" onClick={() => { localStorage.setItem(STORAGE_KEY, '1'); setVisible(false); }}>
         <div className="bg-[#1c1917] text-white rounded-2xl shadow-xl px-4 py-3 flex items-center gap-3">
           <span className="text-2xl leading-none shrink-0">📱</span>
           <div className="flex-1 min-w-0">
