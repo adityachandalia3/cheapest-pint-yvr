@@ -28,12 +28,14 @@ export default function InstallClient() {
   const [platform, setPlatform] = useState<'ios' | 'android' | 'other'>('other');
   const [installed, setInstalled] = useState(false);
   const [tab, setTab] = useState<'ios' | 'android'>('ios');
+  const [iosBrowser, setIosBrowser] = useState<'safari' | 'chrome'>('safari');
   const hasNativePrompt = !!installPrompt.get();
 
   useEffect(() => {
     const p = detectPlatform();
     setPlatform(p);
     setTab(p === 'android' ? 'android' : 'ios');
+    if (p === 'ios' && /CriOS/i.test(navigator.userAgent)) setIosBrowser('chrome');
 
     if (typeof window !== 'undefined') {
       setInstalled(window.matchMedia('(display-mode: standalone)').matches);
@@ -115,32 +117,75 @@ export default function InstallClient() {
 
         {/* iOS instructions */}
         {tab === 'ios' && (
-          <div className="bg-white rounded-2xl border border-[#fde8c4] p-5 shadow-sm space-y-5">
-            <p className="text-xs font-bold text-[#B34207] uppercase tracking-wide">Must use Safari — not Chrome or Firefox</p>
-            <Step
-              n={1}
-              text='Open getbrewscanner.com in Safari'
-              sub='Safari is the app with the compass icon'
-            />
-            <Step
-              n={2}
-              text='Tap the Share button'
-              sub='The square with an arrow pointing up — at the bottom of the screen on iPhone'
-            />
-            <Step
-              n={3}
-              text='Scroll down and tap "Add to Home Screen"'
-              sub='You may need to scroll the list of options to find it'
-            />
-            <Step
-              n={4}
-              text='Tap "Add" in the top right corner'
-              sub='Brewscanner will appear on your home screen like an app'
-            />
-            <div className="bg-[#fef9f0] rounded-xl p-3 border border-[#fde8c4]">
-              <p className="text-xs text-stone-500 leading-relaxed">
-                💡 The Share button looks like this: <span className="font-black text-[#1c1917]">⬆</span> — it&apos;s the icon with a box and an upward arrow, in the middle of the bottom toolbar.
-              </p>
+          <div className="space-y-4">
+            {/* Browser toggle */}
+            <div className="flex bg-white rounded-xl border border-[#e8dcc8] p-1">
+              {(['safari', 'chrome'] as const).map(b => (
+                <button
+                  key={b}
+                  onClick={() => setIosBrowser(b)}
+                  className={`flex-1 py-1.5 text-xs font-black rounded-lg transition-colors ${
+                    iosBrowser === b ? 'bg-[#1c1917] text-white' : 'text-stone-400 hover:text-[#1c1917]'
+                  }`}
+                >
+                  {b === 'safari' ? '🧭 Safari' : '🌐 Chrome'}
+                </button>
+              ))}
+            </div>
+
+            <div className="bg-white rounded-2xl border border-[#fde8c4] p-5 shadow-sm space-y-5">
+              {iosBrowser === 'safari' ? (
+                <>
+                  <Step
+                    n={1}
+                    text='Open getbrewscanner.com in Safari'
+                    sub='Safari is the browser with the compass icon'
+                  />
+                  <Step
+                    n={2}
+                    text='Tap the Share button at the bottom'
+                    sub='The square with an arrow pointing up — in the middle of the bottom toolbar'
+                  />
+                  <Step
+                    n={3}
+                    text='Scroll down and tap "Add to Home Screen"'
+                    sub='You may need to scroll the list of options to find it'
+                  />
+                  <Step
+                    n={4}
+                    text='Tap "Add" in the top right corner'
+                    sub='Brewscanner will appear on your home screen like an app'
+                  />
+                  <div className="bg-[#fef9f0] rounded-xl p-3 border border-[#fde8c4]">
+                    <p className="text-xs text-stone-500 leading-relaxed">
+                      💡 The Share button looks like <span className="font-black text-[#1c1917]">⬆</span> — a box with an upward arrow, in the middle of the bottom bar.
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <Step
+                    n={1}
+                    text='Open getbrewscanner.com in Chrome'
+                    sub='Chrome is the browser with the colourful circle icon'
+                  />
+                  <Step
+                    n={2}
+                    text='Tap the three-dot menu at the bottom right'
+                    sub='The ⋯ icon in the bottom toolbar'
+                  />
+                  <Step
+                    n={3}
+                    text='Tap "Add to Home Screen"'
+                    sub="Scroll the menu if you don't see it immediately"
+                  />
+                  <Step
+                    n={4}
+                    text='Tap "Add" to confirm'
+                    sub='Brewscanner will appear on your home screen like an app'
+                  />
+                </>
+              )}
             </div>
           </div>
         )}
