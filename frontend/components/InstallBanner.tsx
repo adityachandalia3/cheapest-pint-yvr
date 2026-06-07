@@ -25,7 +25,7 @@ export default function InstallBanner() {
     if (isInStandaloneMode()) return;
     if (localStorage.getItem(STORAGE_KEY)) return;
 
-    if (ios) {
+    if (ios || process.env.NODE_ENV === 'development') {
       setVisible(true);
       return;
     }
