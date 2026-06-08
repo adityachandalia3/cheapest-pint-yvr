@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
 import HeroSection from './HeroSection';
 import FilterBar from './FilterBar';
 import VibeSearch, { VIBE_CHIPS } from './VibeSearch';
@@ -31,6 +32,7 @@ export default function PintMapClient({ initialBars }: { initialBars: Bar[] }) {
   const [hoveredBarId, setHoveredBarId] = useState<string | null>(null);
   const [vibeOpen, setVibeOpen] = useState(false);
   const [vibeQuery, setVibeQuery] = useState('');
+  const router = useRouter();
   const { addBar } = useMyNightContext();
 
   const nearMe = useNearMe(bars);
@@ -218,12 +220,12 @@ export default function PintMapClient({ initialBars }: { initialBars: Bar[] }) {
             <input
               value={vibeQuery}
               onChange={e => setVibeQuery(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter' && vibeQuery.trim()) setVibeOpen(true); }}
+              onKeyDown={e => { if (e.key === 'Enter' && vibeQuery.trim()) router.push(`/find-your-vibe?q=${encodeURIComponent(vibeQuery.trim())}`); }}
               placeholder="e.g. lively sports bar with cheap pint..."
               className="flex-1 bg-transparent outline-none text-sm text-[#1c1917] placeholder-stone-400 min-w-0"
             />
             <button
-              onClick={() => { if (vibeQuery.trim()) setVibeOpen(true); }}
+              onClick={() => { if (vibeQuery.trim()) router.push(`/find-your-vibe?q=${encodeURIComponent(vibeQuery.trim())}`); }}
               disabled={!vibeQuery.trim()}
               className="shrink-0 bg-[#1c1917] disabled:opacity-30 text-white font-black text-sm px-4 py-1.5 rounded-lg transition-colors"
             >
@@ -238,7 +240,7 @@ export default function PintMapClient({ initialBars }: { initialBars: Bar[] }) {
               return (
                 <button
                   key={chip.label}
-                  onClick={() => { setVibeQuery(chip.label); setVibeOpen(true); }}
+                  onClick={() => router.push(`/find-your-vibe?q=${encodeURIComponent(`${chip.emoji} ${chip.label}`)}`)}
                   className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full border transition-all duration-150"
                   style={active
                     ? { background: '#B34207', color: '#fff', borderColor: '#B34207' }

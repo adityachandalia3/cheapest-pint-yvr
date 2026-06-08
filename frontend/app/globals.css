@@ -33,6 +33,16 @@ body {
   opacity: 0.6 !important;
 }
 
+/* Chat message fade-in */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
 /* Vibe search card slide-up animation */
 @keyframes slideUp {
   from {

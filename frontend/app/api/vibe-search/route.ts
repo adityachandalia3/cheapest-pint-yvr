@@ -89,7 +89,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Query too long.' }, { status: 400 });
   }
 
-  const cacheKey = query.toLowerCase();
+  const drinkType: string = body?.drinkType ?? 'any';
+  const neighbourhood: string | null = body?.neighbourhood ?? null;
+  const timeOfDay: string | null = body?.timeOfDay ?? null;
+  const maxPrice: number | null = body?.maxPrice ?? null;
+
+  const cacheKey = `${query.toLowerCase()}|${drinkType}|${neighbourhood ?? ''}|${timeOfDay ?? ''}|${maxPrice ?? ''}`;
   const cached = cache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
     return NextResponse.json(cached.data);
@@ -100,7 +105,7 @@ export async function POST(req: NextRequest) {
     process.env.SUPABASE_SERVICE_KEY!
   );
 
-  const { data: bars, error } = await supabase
+  let dbQuery = supabase
     .from('bars')
     .select(`
       id, name, neighbourhood, best_known_for, vibe_profile,
@@ -110,11 +115,35 @@ export async function POST(req: NextRequest) {
     .eq('is_permanently_closed', false)
     .not('vibe_profile', 'is', null);
 
+  if (neighbourhood) {
+    dbQuery = dbQuery.eq('neighbourhood', neighbourhood);
+  }
+
+  const { data: bars, error } = await dbQuery;
+
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const barsWithVibes = ((bars ?? []) as DbBar[]).filter(b => b.vibe_profile);
+  let barsWithVibes = ((bars ?? []) as DbBar[]).filter(b => b.vibe_profile);
+
+  // Price filter
+  if (maxPrice) {
+    barsWithVibes = barsWithVibes.filter(b =>
+      (b.pint_prices ?? []).some(p => p.price_cad <= maxPrice)
+    );
+  }
+
+  // Build enriched query for Claude
+  const contextParts: string[] = [];
+  if (neighbourhood) contextParts.push(`in ${neighbourhood}`);
+  if (drinkType === 'beer') contextParts.push('looking for beers/pints');
+  if (drinkType === 'cocktail') contextParts.push('looking for cocktails');
+  if (timeOfDay) contextParts.push(`going out in the ${timeOfDay}`);
+  if (maxPrice) contextParts.push(`budget around $${maxPrice} per drink`);
+  const enrichedQuery = contextParts.length
+    ? `${query} [${contextParts.join(', ')}]`
+    : query;
   const barContext = barsWithVibes.map(buildBarContext).join('\n\n---\n\n');
 
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
@@ -142,7 +171,7 @@ Respond with ONLY valid JSON, no markdown fences:
         cache_control: { type: 'ephemeral' },
       },
     ],
-    messages: [{ role: 'user', content: query }],
+    messages: [{ role: 'user', content: enrichedQuery }],
   });
 
   let raw = (message.content[0] as { type: string; text: string }).text.trim();
@@ -177,7 +206,7 @@ Respond with ONLY valid JSON, no markdown fences:
         : null;
 
       const vp = bar.vibe_profile as Record<string, unknown>;
-      const firstTag: string | null = (vp?.tags as string[] | undefined)?.[0] ?? null;
+      const tags: string[] = (vp?.tags as string[] | undefined) ?? [];
 
       return {
         bar_id: bar.id,
@@ -186,7 +215,7 @@ Respond with ONLY valid JSON, no markdown fences:
         match_reason: rec.match_reason,
         cheapest_price: activePrice,
         is_happy_hour: happyHour,
-        tag: firstTag,
+        tags,
         expense_rating: (vp?.price_value as string | undefined) ?? null,
       };
     })
