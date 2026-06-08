@@ -16,9 +16,13 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'Brewscanner — Find the Cheapest Pint in Vancouver',
+  title: {
+    default: 'Brewscanner — Find the Cheapest Pint in Vancouver',
+    template: '%s | Brewscanner',
+  },
   description:
-    'Brewscanner — Find the Cheapest Pint in Vancouver. Real beer prices across 100+ bars.',
+    'Real-time beer prices across 100+ Vancouver bars. Find the cheapest pint near you, discover happy hour deals, and build the perfect pub crawl. Free.',
+  metadataBase: new URL('https://www.getbrewscanner.com'),
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
@@ -32,8 +36,19 @@ export const metadata: Metadata = {
     apple: [{ url: '/apple-touch-icon.png' }],
   },
   openGraph: {
+    siteName: 'Brewscanner',
+    type: 'website',
+    locale: 'en_CA',
+    url: 'https://www.getbrewscanner.com',
     title: 'Brewscanner — Find the Cheapest Pint in Vancouver',
-    description: 'Brewscanner — Find the Cheapest Pint in Vancouver. Real beer prices across 100+ bars.',
+    description: 'Real-time beer prices across 100+ Vancouver bars. Find the cheapest pint near you, discover happy hour deals, and build the perfect pub crawl.',
+    images: [{ url: '/logo.png', width: 1080, height: 1080, alt: 'Brewscanner' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Brewscanner — Find the Cheapest Pint in Vancouver',
+    description: 'Real-time beer prices across 100+ Vancouver bars. Find the cheapest pint near you.',
+    images: ['/logo.png'],
   },
 };
 

@@ -2,6 +2,12 @@ import AdvertiseForm from '@/components/AdvertiseForm';
 
 export const metadata = {
   title: 'Advertise With Us — Brewscanner',
+  description: "Reach beer-loving Vancouverites exactly when they're deciding where to drink. Advertise your bar or brand on Brewscanner.",
+  openGraph: {
+    title: 'Advertise With Us — Brewscanner',
+    description: "Reach beer-loving Vancouverites exactly when they're deciding where to drink.",
+    url: 'https://www.getbrewscanner.com/advertise',
+  },
 };
 
 export default function AdvertisePage() {

@@ -1,5 +1,6 @@
 export const metadata = {
   title: 'Privacy Policy — Brewscanner',
+  description: "Brewscanner's privacy policy — what data we collect, how we use it, and how to contact us.",
 };
 
 const sections = [

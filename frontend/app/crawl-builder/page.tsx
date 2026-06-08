@@ -1,7 +1,18 @@
 import { createClient } from '@supabase/supabase-js';
+import type { Metadata } from 'next';
 import CrawlBuilderClient from '@/components/CrawlBuilderClient';
 
 export const dynamic = 'force-dynamic';
+
+export const metadata: Metadata = {
+  title: 'Pub Crawl Builder — Brewscanner Vancouver',
+  description: 'Build the perfect Vancouver pub crawl. Pick your neighbourhood, budget and vibe — we\'ll plan your route across the cheapest bars.',
+  openGraph: {
+    title: 'Pub Crawl Builder — Brewscanner Vancouver',
+    description: 'Build the perfect Vancouver pub crawl. Pick your neighbourhood, budget and vibe — we\'ll plan your route across the cheapest bars.',
+    url: 'https://www.getbrewscanner.com/crawl-builder',
+  },
+};
 
 export interface BarOption {
   id: string;

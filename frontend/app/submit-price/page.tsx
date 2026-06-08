@@ -4,8 +4,10 @@ import SubmitPriceForm from '@/components/SubmitPriceForm';
 export const dynamic = 'force-dynamic';
 
 export const metadata = {
-  title: 'Submit a Price — Brewscanner',
+  title: 'Submit a Beer Price — Brewscanner',
+  description: 'Spotted a wrong price or found a deal we missed? Submit a pint price for any Vancouver bar and help keep Brewscanner accurate.',
 };
+
 
 export interface BarOption {
   id: string;

@@ -1,9 +1,21 @@
 import { createClient } from '@supabase/supabase-js';
+import type { Metadata } from 'next';
 import PintMapClient from '@/components/PintMapClient';
 import CommunityPopup from '@/components/CommunityPopup';
+import JsonLd from '@/components/JsonLd';
 import { Bar } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
+
+export const metadata: Metadata = {
+  title: 'Brewscanner — Find the Cheapest Pint in Vancouver Right Now',
+  description: 'Real-time beer prices across 100+ Vancouver bars. Find the cheapest pint near you, discover happy hour deals, and build the perfect pub crawl. Free.',
+  openGraph: {
+    title: 'Brewscanner — Find the Cheapest Pint in Vancouver Right Now',
+    description: 'Real-time beer prices across 100+ Vancouver bars. Find the cheapest pint near you, discover happy hour deals, and build the perfect pub crawl.',
+    url: 'https://www.getbrewscanner.com',
+  },
+};
 
 export default async function Home() {
   const supabase = createClient(
@@ -35,8 +47,10 @@ export default async function Home() {
 
   return (
     <>
+      <h1 className="sr-only">Find the Cheapest Pint in Vancouver</h1>
       <PintMapClient initialBars={(data ?? []) as Bar[]} />
       <CommunityPopup />
+      <JsonLd />
     </>
   );
 }

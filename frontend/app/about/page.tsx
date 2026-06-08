@@ -1,7 +1,13 @@
 import Link from 'next/link';
 
 export const metadata = {
-  title: 'About — Brewscanner',
+  title: "About Brewscanner — Vancouver's Cheapest Pint Finder",
+  description: "Brewscanner scans 100+ Vancouver bars to find you the cheapest pint in the city. Learn how it works, how prices are sourced, and why we built it.",
+  openGraph: {
+    title: "About Brewscanner — Vancouver's Cheapest Pint Finder",
+    description: "Brewscanner scans 100+ Vancouver bars to find you the cheapest pint in the city.",
+    url: 'https://www.getbrewscanner.com/about',
+  },
 };
 
 export default function AboutPage() {
@@ -11,7 +17,7 @@ export default function AboutPage() {
         {/* Logo */}
         <div className="flex items-center gap-3 mb-10">
           <span className="text-4xl">🍺</span>
-          <span className="font-black text-2xl tracking-tight text-[#B34207]">Brewscanner</span>
+          <h1 className="font-black text-2xl tracking-tight text-[#B34207]">Brewscanner</h1>
         </div>
 
         <div className="prose-like space-y-6 text-stone-600 leading-relaxed text-base">

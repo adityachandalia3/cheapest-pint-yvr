@@ -1,5 +1,6 @@
 export const metadata = {
   title: 'Terms & Conditions — Brewscanner',
+  description: "Brewscanner's terms and conditions of use.",
 };
 
 const sections = [

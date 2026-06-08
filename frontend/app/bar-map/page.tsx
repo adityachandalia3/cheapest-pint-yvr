@@ -5,7 +5,13 @@ import { Bar } from '@/lib/types';
 export const dynamic = 'force-dynamic';
 
 export const metadata = {
-  title: 'Bar Map — Brewscanner',
+  title: 'All Vancouver Bars — Brewscanner',
+  description: 'Browse all 100+ Vancouver bars with live pint prices on an interactive map. Filter by neighbourhood, beer type, and happy hour.',
+  openGraph: {
+    title: 'All Vancouver Bars — Brewscanner',
+    description: 'Browse all 100+ Vancouver bars with live pint prices on an interactive map.',
+    url: 'https://www.getbrewscanner.com/bar-map',
+  },
 };
 
 export default async function BarMapPage() {
