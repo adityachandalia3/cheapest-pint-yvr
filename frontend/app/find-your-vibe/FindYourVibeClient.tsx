@@ -98,7 +98,6 @@ export default function FindYourVibeClient({ initialQuery }: { initialQuery: str
   const [query, setQuery] = useState(initialQuery);
   const [drinkType, setDrinkType] = useState<DrinkType | null>(null);
   const [neighbourhood, setNeighbourhood] = useState<string | null>(null);
-  const [timeOfDay, setTimeOfDay] = useState<string | null>(null);
   const [results, setResults] = useState<VibeResult[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -235,7 +234,7 @@ export default function FindYourVibeClient({ initialQuery }: { initialQuery: str
 
     else if (step === 'time_of_day') {
       const time = chip.value || null;
-      setTimeOfDay(time);
+
       addUser(`${chip.emoji} ${chip.label}`);
       setTimeout(() => {
         addBot('On it — finding your perfect cocktail spot... 🍹');
@@ -251,7 +250,7 @@ export default function FindYourVibeClient({ initialQuery }: { initialQuery: str
         setTimeout(() => runSearch(query, drinkType ?? 'any', neighbourhood, null, max), 600);
       }, 400);
     }
-  }, [step, neighbourhood, drinkType, timeOfDay, query, addUser, addBot, markLastChipsAnswered, runSearch]);
+  }, [step, neighbourhood, drinkType, query, addUser, addBot, markLastChipsAnswered, runSearch]);
 
   return (
     <main className="h-screen bg-[#fef9f0] flex flex-col overflow-hidden">
@@ -278,7 +277,7 @@ export default function FindYourVibeClient({ initialQuery }: { initialQuery: str
               <span className="text-3xl">✨</span>
             </div>
             <h2 className="font-black text-[#1c1917] text-xl mb-1">Find Your Vibe</h2>
-            <p className="text-stone-500 text-sm">Describe your night and we'll match you with the perfect bar.</p>
+            <p className="text-stone-500 text-sm">Describe your night and we&apos;ll match you with the perfect bar.</p>
           </div>
         )}
 
@@ -384,7 +383,7 @@ export default function FindYourVibeClient({ initialQuery }: { initialQuery: str
                       setQuery('');
                       setDrinkType(null);
                       setNeighbourhood(null);
-                      setTimeOfDay(null);
+
                       setResults(null);
                       setError(null);
                       started.current = false;
