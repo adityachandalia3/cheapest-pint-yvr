@@ -2,9 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { IconBeer } from '@tabler/icons-react';
-import VibeSearch from './VibeSearch';
 import MyNightDrawer from './MyNightDrawer';
 import CommunityPopup from './CommunityPopup';
 import { useMyNightContext } from '@/lib/myNightContext';
@@ -28,14 +27,12 @@ function Wordmark({ mobile }: { mobile?: boolean }) {
 }
 
 export default function SiteNav() {
-  const [vibeOpen, setVibeOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [desktopMoreOpen, setDesktopMoreOpen] = useState(false);
   const [myPicksOpen, setMyPicksOpen] = useState(false);
   const [communityOpen, setCommunityOpen] = useState(false);
   const pathname = usePathname();
-  const router = useRouter();
-  const { myNight, addBar } = useMyNightContext();
+  const { myNight } = useMyNightContext();
   const desktopMoreRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -55,14 +52,6 @@ export default function SiteNav() {
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [desktopMoreOpen]);
-
-  const handleShowOnMap = (barId: string) => {
-    if (pathname === '/') {
-      window.dispatchEvent(new CustomEvent('pintmap:showBar', { detail: barId }));
-    } else {
-      router.push('/');
-    }
-  };
 
   return (
     <>
@@ -190,22 +179,24 @@ export default function SiteNav() {
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         <div className="flex">
-          <button
-            onClick={() => setVibeOpen(true)}
+          <Link
+            href="/find-your-vibe"
             className={`flex-1 flex flex-col items-center justify-center py-2 gap-0 text-xs font-black transition-colors ${
-              vibeOpen ? 'text-[#B34207]' : 'text-[#1c1917]'
+              pathname === '/find-your-vibe' ? 'text-[#B34207]' : 'text-[#1c1917]'
             }`}
           >
             <span className="relative inline-block leading-none">
               <span className="text-[20px]">✨</span>
-              <span className="absolute -top-0.5 -right-1 flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-400" />
-              </span>
+              {pathname !== '/find-your-vibe' && (
+                <span className="absolute -top-0.5 -right-1 flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-400" />
+                </span>
+              )}
             </span>
             <span className="mt-0.5">Find Your Vibe</span>
             <span className="text-[9px] text-stone-300 leading-none mt-0.5">Try me!</span>
-          </button>
+          </Link>
 
           <Link
             href="/crawl-builder"
@@ -280,14 +271,6 @@ export default function SiteNav() {
           </div>
         </div>
       )}
-
-      {/* ── Vibe Search Modal ───────────────────────────────────────────── */}
-      <VibeSearch
-        isOpen={vibeOpen}
-        onClose={() => setVibeOpen(false)}
-        onShowOnMap={handleShowOnMap}
-        onAddToMyNight={addBar}
-      />
 
       {/* ── My Picks Drawer ─────────────────────────────────────────────── */}
       <MyNightDrawer isOpen={myPicksOpen} onClose={() => setMyPicksOpen(false)} />

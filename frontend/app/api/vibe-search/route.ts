@@ -154,12 +154,14 @@ export async function POST(req: NextRequest) {
     system: [
       {
         type: 'text',
-        text: `You are a Vancouver bar expert. Based on the user's request and the following bar profiles, recommend the 3 best matching bars. For each bar explain in 2-3 sentences why it matches their vibe tonight. Be conversational, specific, and honest. Reference actual details from that bar's own profile only — do NOT mix details from different bars.
+        text: `You are a Vancouver bar expert. Based on the user's request and the following bar profiles, recommend the 5 best matching bars. For each bar write ONE punchy sentence (max 20 words) saying exactly why it fits — be specific, reference a real detail (price, crowd, patio, vibe). No generic phrases.
 
-CRITICAL: Each bar profile starts with [ID:...]. You must use the exact bar_id from that bar's profile. Only use details (crowd, energy, prices, tips) from that specific bar's profile in its match_reason.
+CRITICAL: Each bar profile starts with [ID:...]. You must use the exact bar_id from that bar's profile. Only use details from that specific bar's profile.
 
 Respond with ONLY valid JSON, no markdown fences:
 [
+  { "bar_id": "...", "match_reason": "..." },
+  { "bar_id": "...", "match_reason": "..." },
   { "bar_id": "...", "match_reason": "..." },
   { "bar_id": "...", "match_reason": "..." },
   { "bar_id": "...", "match_reason": "..." }
@@ -185,6 +187,8 @@ Respond with ONLY valid JSON, no markdown fences:
   }
 
   const now = new Date();
+  const DAY_ABBR = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+  const todayKey = DAY_ABBR[now.getDay()];
 
   const enriched = recommendations
     .map(rec => {
@@ -192,6 +196,19 @@ Respond with ONLY valid JSON, no markdown fences:
       if (!bar) return null;
 
       const happyHour = isHappyHourActive(bar as unknown as Bar, now);
+
+      // Find today's HH window for display (regardless of whether it's currently active)
+      let happyHourEnd: string | null = null;
+      let happyHourStart: string | null = null;
+      let happyHourDays: string[] | null = null;
+      const win = (bar.happy_hour_windows ?? []).find(w =>
+        w.days.map((d: string) => d.toLowerCase()).includes(todayKey)
+      );
+      if (win) {
+        happyHourEnd   = win.end_time.slice(0, 5);
+        happyHourStart = win.start_time.slice(0, 5);
+        happyHourDays  = win.days;
+      }
       const sortedPrices = [...(bar.pint_prices ?? [])].sort((a, b) => {
         const aActive = happyHour && a.happy_hour_price_cad ? a.happy_hour_price_cad : a.price_cad;
         const bActive = happyHour && b.happy_hour_price_cad ? b.happy_hour_price_cad : b.price_cad;
@@ -215,6 +232,9 @@ Respond with ONLY valid JSON, no markdown fences:
         match_reason: rec.match_reason,
         cheapest_price: activePrice,
         is_happy_hour: happyHour,
+        happy_hour_end: happyHourEnd,
+        happy_hour_start: happyHourStart,
+        happy_hour_days: happyHourDays,
         tags,
         expense_rating: (vp?.price_value as string | undefined) ?? null,
       };
@@ -224,7 +244,7 @@ Respond with ONLY valid JSON, no markdown fences:
   // Ensure at most 1 bar without price data — sort priced bars first, then cap
   const withPrice = enriched.filter(r => r!.cheapest_price != null);
   const withoutPrice = enriched.filter(r => r!.cheapest_price == null).slice(0, 1);
-  const filtered = [...withPrice, ...withoutPrice].slice(0, 3);
+  const filtered = [...withPrice, ...withoutPrice].slice(0, 5);
 
   const result = { recommendations: filtered };
   cache.set(cacheKey, { data: result, expiresAt: Date.now() + 30 * 60 * 1000 });

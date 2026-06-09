@@ -29,6 +29,9 @@ interface VibeResult {
   match_reason: string;
   cheapest_price: number | null;
   is_happy_hour: boolean;
+  happy_hour_end: string | null;
+  happy_hour_start: string | null;
+  happy_hour_days: string[] | null;
   tags: string[];
   expense_rating: string | null;
 }
@@ -42,14 +45,6 @@ const DRINK_CHIPS: Chip[] = [
   { emoji: '🥃', label: 'Whatever\'s good', value: 'any' },
 ];
 
-const LOCATION_CHIPS: Chip[] = [
-  { emoji: '🏙️', label: 'Downtown', value: 'Downtown' },
-  { emoji: '🪨', label: 'Gastown & Chinatown', value: 'Gastown & Chinatown' },
-  { emoji: '🍸', label: 'Yaletown', value: 'Yaletown' },
-  { emoji: '🌊', label: 'Kitsilano & West Side', value: 'Kitsilano & West Side' },
-  { emoji: '🎸', label: 'East Vancouver', value: 'East Vancouver' },
-  { emoji: '🗺️', label: 'Anywhere', value: '' },
-];
 
 const TIME_CHIPS: Chip[] = [
   { emoji: '🌤️', label: 'Afternoon', value: 'afternoon' },
@@ -86,7 +81,70 @@ function detectNeighbourhood(query: string): string | null {
   return null;
 }
 
+function detectDrinkType(query: string): DrinkType | null {
+  if (/cocktail|mojito|martini|margarita|negroni|old fashioned|espresso|spritz|\bgin\b|whisky|whiskey|\brum\b|tequila|\bvodka\b|mixed drink/i.test(query)) return 'cocktail';
+  if (/\bpint\b|draught|draft|\bbeer\b|lager|\bipa\b|\bale\b|craft beer|\bbrew\b|pale ale|stout|hazy/i.test(query)) return 'beer';
+  return null;
+}
+
+function detectTimeOfDay(query: string): string | undefined {
+  if (/late.?night|after midnight|last call|after.?hours|nightcap/i.test(query)) return 'late night';
+  if (/afternoon|after.?work|day.?drink|daytime|\bearly\b|pregame|pre.?game/i.test(query)) return 'afternoon';
+  if (/\bevening\b|dinner|tonight|night out/i.test(query)) return 'evening';
+  return undefined;
+}
+
+// Returns: a number (cap), null (no limit), or undefined (unknown — ask)
+function detectMaxPrice(query: string): number | null | undefined {
+  if (/cheap(est)?|budget|affordable|\bdeal\b|\bvalue\b|under \$8|bargain/i.test(query)) return 8;
+  if (/\$8.{0,4}10|around \$10|mid.?range/i.test(query)) return 10;
+  if (/no budget|don.?t care|whatever|not (worried|fussed).*price/i.test(query)) return null;
+  return undefined;
+}
+
 function formatTag(tag: string) { return tag.replace(/_/g, ' '); }
+
+function formatHHTime(t: string): string {
+  const [h, m] = t.split(':').map(Number);
+  const ampm = h >= 12 ? 'pm' : 'am';
+  const hour = h % 12 || 12;
+  return m === 0 ? `${hour}${ampm}` : `${hour}:${m.toString().padStart(2, '0')}${ampm}`;
+}
+
+
+function formatHHDays(days: string[]): string {
+  const ORDER = ['sun','mon','tue','wed','thu','fri','sat'];
+  const DISPLAY: Record<string,string> = { sun:'Sun', mon:'Mon', tue:'Tue', wed:'Wed', thu:'Thu', fri:'Fri', sat:'Sat' };
+  const sorted = [...days].map(d => d.toLowerCase()).sort((a, b) => ORDER.indexOf(a) - ORDER.indexOf(b));
+  const key = sorted.join(',');
+  if (key === 'mon,tue,wed,thu,fri') return 'Weekdays';
+  if (key === 'mon,tue,wed,thu,fri,sat') return 'Mon–Sat';
+  if (sorted.length === 7) return 'Daily';
+  if (sorted.length === 1) return DISPLAY[sorted[0]] ?? sorted[0];
+  const indices = sorted.map(d => ORDER.indexOf(d));
+  const consecutive = indices.every((v, i) => i === 0 || v === indices[i - 1] + 1);
+  if (consecutive && sorted.length >= 3) return `${DISPLAY[sorted[0]]}–${DISPLAY[sorted[sorted.length - 1]]}`;
+  return sorted.map(d => DISPLAY[d] ?? d).join(', ');
+}
+
+function getInfoLine(r: VibeResult): { text: string; className: string } {
+  if (r.is_happy_hour && r.happy_hour_end) {
+    return {
+      text: `🟢 HH active · ends ${formatHHTime(r.happy_hour_end)}`,
+      className: 'text-emerald-700 font-semibold',
+    };
+  }
+  if (r.happy_hour_start && r.happy_hour_end) {
+    return {
+      text: `🕐 HH ${formatHHTime(r.happy_hour_start)}–${formatHHTime(r.happy_hour_end)}`,
+      className: 'text-stone-500',
+    };
+  }
+  if (r.neighbourhood) {
+    return { text: `📍 ${r.neighbourhood}`, className: 'text-stone-400' };
+  }
+  return { text: '', className: '' };
+}
 
 // ---------------------------------------------------------------------------
 // Component
@@ -104,7 +162,11 @@ export default function FindYourVibeClient({ initialQuery }: { initialQuery: str
   const resultsTopRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const started = useRef(false);
+  const [timeOfDay, setTimeOfDay] = useState<string | undefined>(undefined);
+  const [maxPrice, setMaxPrice] = useState<number | null | undefined>(undefined);
   const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [showAll, setShowAll] = useState(false);
   const { addBar } = useMyNightContext();
 
   const addBot = useCallback((text: string, chips?: Chip[]) => {
@@ -137,24 +199,6 @@ export default function FindYourVibeClient({ initialQuery }: { initialQuery: str
     }
   }, [messages, step]);
 
-  // Kick off conversation when initialQuery provided
-  useEffect(() => {
-    if (!initialQuery || started.current) return;
-    started.current = true;
-    const detected = detectNeighbourhood(initialQuery);
-    setNeighbourhood(detected);
-    setMessages([makeMsg('user', initialQuery)]);
-    setTimeout(() => {
-      addBot('What are you drinking tonight?', DRINK_CHIPS);
-      setStep('drink_type');
-    }, 400);
-  }, [initialQuery, addBot]);
-
-  // Focus input on mount if no initial query
-  useEffect(() => {
-    if (!initialQuery) setTimeout(() => inputRef.current?.focus(), 100);
-  }, [initialQuery]);
-
   const runSearch = useCallback(async (q: string, drink: DrinkType, hood: string | null, time: string | null, max: number | null) => {
     setStep('searching');
     setError(null);
@@ -177,20 +221,86 @@ export default function FindYourVibeClient({ initialQuery }: { initialQuery: str
     }
   }, []);
 
+  // Kick off conversation when initialQuery provided
+  useEffect(() => {
+    if (!initialQuery || started.current) return;
+    started.current = true;
+    const detectedHood  = detectNeighbourhood(initialQuery);
+    const detectedDrink = detectDrinkType(initialQuery);
+    const detectedTime  = detectTimeOfDay(initialQuery);
+    const detectedBudget = detectMaxPrice(initialQuery);
+    setNeighbourhood(detectedHood);
+    if (detectedDrink) setDrinkType(detectedDrink);
+    if (detectedTime !== undefined) setTimeOfDay(detectedTime);
+    if (detectedBudget !== undefined) setMaxPrice(detectedBudget);
+    setMessages([makeMsg('user', initialQuery)]);
+    setTimeout(() => {
+      if (!detectedDrink) {
+        addBot('What are you drinking tonight?', DRINK_CHIPS);
+        setStep('drink_type');
+      } else if (detectedDrink === 'cocktail') {
+        if (detectedTime === undefined) {
+          addBot('What time are you heading out?', TIME_CHIPS);
+          setStep('time_of_day');
+        } else {
+          addBot('On it — finding your perfect cocktail spot... 🍹');
+          setTimeout(() => runSearch(initialQuery, detectedDrink, detectedHood, detectedTime, null), 600);
+        }
+      } else {
+        if (detectedBudget === undefined) {
+          addBot("What's your budget per pint?", PRICE_CHIPS);
+          setStep('price');
+        } else {
+          addBot('Finding your perfect spot...');
+          setTimeout(() => runSearch(initialQuery, detectedDrink, detectedHood, null, detectedBudget), 600);
+        }
+      }
+    }, 400);
+  }, [initialQuery, addBot, runSearch]);
+
+  // Focus input on mount if no initial query
+  useEffect(() => {
+    if (!initialQuery) setTimeout(() => inputRef.current?.focus(), 100);
+  }, [initialQuery]);
+
   // Handle initial text submission (when no initialQuery)
   const handleInputSubmit = useCallback(() => {
     const q = inputText.trim();
     if (!q) return;
     setQuery(q);
-    const detected = detectNeighbourhood(q);
-    setNeighbourhood(detected);
+    const detectedHood   = detectNeighbourhood(q);
+    const detectedDrink  = detectDrinkType(q);
+    const detectedTime   = detectTimeOfDay(q);
+    const detectedBudget = detectMaxPrice(q);
+    setNeighbourhood(detectedHood);
+    if (detectedDrink) setDrinkType(detectedDrink);
+    if (detectedTime !== undefined) setTimeOfDay(detectedTime);
+    if (detectedBudget !== undefined) setMaxPrice(detectedBudget);
     setMessages([makeMsg('user', q)]);
     setInputText('');
     setTimeout(() => {
-      addBot('What are you drinking tonight?', DRINK_CHIPS);
-      setStep('drink_type');
+      if (!detectedDrink) {
+        addBot('What are you drinking tonight?', DRINK_CHIPS);
+        setStep('drink_type');
+      } else if (detectedDrink === 'cocktail') {
+        if (detectedTime === undefined) {
+          addBot('What time are you heading out?', TIME_CHIPS);
+          setStep('time_of_day');
+        } else {
+          addBot('On it — finding your perfect cocktail spot... 🍹');
+          setTimeout(() => runSearch(q, detectedDrink, detectedHood, detectedTime, null), 600);
+        }
+      } else {
+        if (detectedBudget === undefined) {
+          addBot("What's your budget per pint?", PRICE_CHIPS);
+          setStep('price');
+        } else {
+          addBot('Finding your perfect spot...');
+          setTimeout(() => runSearch(q, detectedDrink, detectedHood, null, detectedBudget), 600);
+        }
+      }
     }, 400);
-  }, [inputText, addBot]);
+  }, [inputText, addBot, runSearch]);
 
   // Handle chip selection
   const handleChip = useCallback((chip: Chip) => {
@@ -201,18 +311,22 @@ export default function FindYourVibeClient({ initialQuery }: { initialQuery: str
       setDrinkType(drink);
       addUser(`${chip.emoji} ${chip.label}`);
       setTimeout(() => {
-        if (neighbourhood !== null) {
-          // Location already known
-          if (drink === 'cocktail') {
+        if (drink === 'cocktail') {
+          if (timeOfDay !== undefined) {
+            addBot('On it — finding your perfect cocktail spot... 🍹');
+            setTimeout(() => runSearch(query, drink, neighbourhood, timeOfDay, null), 600);
+          } else {
             addBot('What time are you heading out?', TIME_CHIPS);
             setStep('time_of_day');
-          } else {
-            addBot('What\'s your budget per pint?', PRICE_CHIPS);
-            setStep('price');
           }
         } else {
-          addBot('Where in the city tonight?', LOCATION_CHIPS);
-          setStep('location');
+          if (maxPrice !== undefined) {
+            addBot('Finding your perfect spot...');
+            setTimeout(() => runSearch(query, drink, neighbourhood, null, maxPrice), 600);
+          } else {
+            addBot("What's your budget per pint?", PRICE_CHIPS);
+            setStep('price');
+          }
         }
       }, 400);
     }
@@ -233,24 +347,25 @@ export default function FindYourVibeClient({ initialQuery }: { initialQuery: str
     }
 
     else if (step === 'time_of_day') {
-      const time = chip.value || null;
-
+      const time = chip.value || undefined;
+      setTimeOfDay(time);
       addUser(`${chip.emoji} ${chip.label}`);
       setTimeout(() => {
         addBot('On it — finding your perfect cocktail spot... 🍹');
-        setTimeout(() => runSearch(query, 'cocktail', neighbourhood, time, null), 600);
+        setTimeout(() => runSearch(query, 'cocktail', neighbourhood, time ?? null, null), 600);
       }, 400);
     }
 
     else if (step === 'price') {
       const max = chip.value ? parseInt(chip.value) : null;
+      setMaxPrice(max);
       addUser(`${chip.emoji} ${chip.label}`);
       setTimeout(() => {
         addBot('Finding your perfect spot...');
         setTimeout(() => runSearch(query, drinkType ?? 'any', neighbourhood, null, max), 600);
       }, 400);
     }
-  }, [step, neighbourhood, drinkType, query, addUser, addBot, markLastChipsAnswered, runSearch]);
+  }, [step, neighbourhood, drinkType, query, timeOfDay, maxPrice, addUser, addBot, markLastChipsAnswered, runSearch]);
 
   return (
     <main className="h-screen bg-[#fef9f0] flex flex-col overflow-hidden">
@@ -268,20 +383,58 @@ export default function FindYourVibeClient({ initialQuery }: { initialQuery: str
       </div>
 
       {/* Chat thread */}
-      <div ref={chatContainerRef} className="flex-1 overflow-y-auto px-4 py-6 space-y-4 max-w-2xl mx-auto w-full">
+      <div ref={chatContainerRef} className="flex-1 overflow-y-auto px-4 max-w-2xl mx-auto w-full">
 
-        {/* Empty state */}
+        {/* Empty state — icon + search box + chips all together, vertically centred */}
         {messages.length === 0 && step === 'input' && (
-          <div className="text-center pt-8 pb-4">
-            <div className="w-16 h-16 rounded-2xl bg-[#B34207] flex items-center justify-center mx-auto mb-4 shadow-lg">
-              <span className="text-3xl">✨</span>
+          <div className="flex flex-col items-center justify-center h-full gap-5 py-4">
+            <div className="text-center">
+              <div className="w-12 h-12 rounded-2xl bg-[#B34207] flex items-center justify-center mx-auto mb-3 shadow-lg">
+                <span className="text-2xl">✨</span>
+              </div>
+              <h2 className="font-black text-[#1c1917] text-xl mb-1">Find Your Vibe</h2>
+              <p className="text-stone-500 text-sm">Describe your night and we&apos;ll match you with the perfect bar.</p>
             </div>
-            <h2 className="font-black text-[#1c1917] text-xl mb-1">Find Your Vibe</h2>
-            <p className="text-stone-500 text-sm">Describe your night and we&apos;ll match you with the perfect bar.</p>
+
+            <div className="w-full">
+              <div className="flex items-center gap-2 bg-white border border-[#fde8c4] focus-within:border-[#B34207]/50 rounded-2xl px-4 py-3 shadow-sm transition-all">
+                <input
+                  ref={inputRef}
+                  value={inputText}
+                  onChange={e => setInputText(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleInputSubmit()}
+                  placeholder="e.g. lively sports bar with friends..."
+                  className="flex-1 bg-transparent outline-none text-sm text-[#1c1917] placeholder-stone-400 min-w-0"
+                />
+                <button
+                  onClick={handleInputSubmit}
+                  disabled={!inputText.trim()}
+                  className="shrink-0 bg-[#B34207] hover:bg-[#8f3506] disabled:opacity-30 disabled:cursor-not-allowed text-white font-black text-sm px-4 py-2 rounded-xl transition-colors"
+                >
+                  Go
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {[
+                  { emoji: '🍺', label: 'Cheap pregame before Granville' },
+                  { emoji: '💫', label: 'Cozy first date, not too loud' },
+                  { emoji: '💎', label: 'Hidden local gem, no tourists' },
+                ].map(chip => (
+                  <button
+                    key={chip.label}
+                    onClick={() => { setInputText(`${chip.emoji} ${chip.label}`); inputRef.current?.focus(); }}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-white border border-[#e8dcc8] text-stone-500 hover:border-[#B34207]/40 transition-colors"
+                  >
+                    {chip.emoji} {chip.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 
         {/* Messages */}
+        <div className={messages.length > 0 ? 'py-6 space-y-4' : ''}>
         {messages.map(msg => (
           <div key={msg.id} className={`flex gap-3 ${msg.from === 'user' ? 'justify-end' : 'justify-start'} animate-fadeIn`}>
             {msg.from === 'bot' && (
@@ -354,27 +507,41 @@ export default function FindYourVibeClient({ initialQuery }: { initialQuery: str
                     Here are your top picks for tonight 🎯
                   </div>
                 </div>
-                {results.map((r, i) => (
-                  <ResultCard
-                    key={r.bar_id}
-                    result={r}
-                    rank={i + 1}
-                    drinkType={drinkType ?? 'any'}
-                    isAdded={addedIds.has(r.bar_id)}
-                    onAddToMyNight={() => {
-                      const res = addBar({
-                        id: r.bar_id,
-                        name: r.bar_name,
-                        neighbourhood: r.neighbourhood,
-                        price: r.cheapest_price,
-                        lat: null,
-                        lng: null,
-                        isHappyHour: r.is_happy_hour,
-                      } as MyNightBar);
-                      if (res === 'added') setAddedIds(prev => new Set(prev).add(r.bar_id));
-                    }}
-                  />
-                ))}
+                <div className="bg-white border border-[#fde8c4] rounded-2xl shadow-sm overflow-hidden ml-11 divide-y divide-[#fde8c4]">
+                  {(showAll ? results : results.slice(0, 3)).map((r, i) => (
+                    <ResultCard
+                      key={r.bar_id}
+                      result={r}
+                      rank={i + 1}
+                      drinkType={drinkType ?? 'any'}
+                      isExpanded={expandedId === r.bar_id}
+                      onToggle={() => setExpandedId(id => id === r.bar_id ? null : r.bar_id)}
+                      isAdded={addedIds.has(r.bar_id)}
+                      onAddToMyNight={() => {
+                        const res = addBar({
+                          id: r.bar_id,
+                          name: r.bar_name,
+                          neighbourhood: r.neighbourhood,
+                          price: r.cheapest_price,
+                          lat: null,
+                          lng: null,
+                          isHappyHour: r.is_happy_hour,
+                        } as MyNightBar);
+                        if (res === 'added') setAddedIds(prev => new Set(prev).add(r.bar_id));
+                      }}
+                    />
+                  ))}
+                </div>
+                {!showAll && results.length > 3 && (
+                  <div className="flex justify-center mt-2">
+                    <button
+                      onClick={() => setShowAll(true)}
+                      className="text-sm text-[#B34207] font-semibold hover:underline"
+                    >
+                      Show me more options →
+                    </button>
+                  </div>
+                )}
                 <div className="pt-2 pb-4 text-center">
                   <button
                     onClick={() => {
@@ -386,6 +553,9 @@ export default function FindYourVibeClient({ initialQuery }: { initialQuery: str
 
                       setResults(null);
                       setError(null);
+                      setShowAll(false);
+                      setTimeOfDay(undefined);
+                      setMaxPrice(undefined);
                       started.current = false;
                       setTimeout(() => inputRef.current?.focus(), 100);
                     }}
@@ -398,133 +568,109 @@ export default function FindYourVibeClient({ initialQuery }: { initialQuery: str
             ) : null}
           </div>
         )}
+        </div>
 
       </div>
-
-      {/* Input bar — only shown before conversation starts */}
-      {step === 'input' && (
-        <div className="sticky bottom-0 bg-[#fef9f0] border-t border-[#e8dcc8] px-4 py-3">
-          <div className="max-w-2xl mx-auto flex items-center gap-2 bg-white border border-[#fde8c4] focus-within:border-[#B34207]/50 rounded-2xl px-4 py-3 shadow-sm transition-all">
-            <input
-              ref={inputRef}
-              value={inputText}
-              onChange={e => setInputText(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleInputSubmit()}
-              placeholder="e.g. lively sports bar with friends..."
-              className="flex-1 bg-transparent outline-none text-sm text-[#1c1917] placeholder-stone-400 min-w-0"
-            />
-            <button
-              onClick={handleInputSubmit}
-              disabled={!inputText.trim()}
-              className="shrink-0 bg-[#B34207] hover:bg-[#8f3506] disabled:opacity-30 disabled:cursor-not-allowed text-white font-black text-sm px-4 py-2 rounded-xl transition-colors"
-            >
-              Go
-            </button>
-          </div>
-          <div className="flex flex-wrap gap-2 mt-2 max-w-2xl mx-auto">
-            {[
-              { emoji: '🍺', label: 'Cheap pregame before Granville' },
-              { emoji: '💫', label: 'Cozy first date, not too loud' },
-              { emoji: '💎', label: 'Hidden local gem, no tourists' },
-            ].map(chip => (
-              <button
-                key={chip.label}
-                onClick={() => {
-                  setInputText(`${chip.emoji} ${chip.label}`);
-                  inputRef.current?.focus();
-                }}
-                className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-white border border-[#e8dcc8] text-stone-500 hover:border-[#B34207]/40 transition-colors"
-              >
-                {chip.emoji} {chip.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
     </main>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Result card
+// Result card — compact scan row, tap to expand (one at a time)
 // ---------------------------------------------------------------------------
-function ResultCard({ result: r, rank, drinkType, isAdded, onAddToMyNight }: {
+function ResultCard({ result: r, drinkType, isExpanded, onToggle, isAdded, onAddToMyNight }: {
   result: VibeResult;
-  rank: number;
+  rank?: number;
   drinkType: DrinkType;
+  isExpanded: boolean;
+  onToggle: () => void;
   isAdded: boolean;
   onAddToMyNight: () => void;
 }) {
+  const info = getInfoLine(r);
+
   return (
-    <div className="bg-white border border-[#fde8c4] rounded-2xl p-4 shadow-sm ml-11">
-      <div className="flex items-start justify-between gap-3 mb-2">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="font-black text-[#1c1917] text-sm">{r.bar_name}</h3>
-            {r.tags[0] && (
-              <span className="text-[10px] bg-[#F5A623]/10 text-[#b45309] border border-[#F5A623]/25 px-1.5 py-0.5 rounded-full font-semibold capitalize">
-                {formatTag(r.tags[0])}
-              </span>
-            )}
-          </div>
-          {r.neighbourhood && <p className="text-xs text-stone-400 mt-0.5">{r.neighbourhood}</p>}
+    <div>
+      {/* ── Compact row (always visible, ~64px tap target) ── */}
+      <button onClick={onToggle} className="relative w-full flex items-center gap-3 pl-5 pr-4 py-3 text-left min-h-[64px]">
+        {/* Left accent bar */}
+        <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-[#B34207]" />
+
+        {/* Name + info line */}
+        <div className="flex-1 min-w-0">
+          <p className="font-black text-[#1c1917] text-sm leading-tight">{r.bar_name}</p>
+          {info.text && (
+            <p className={`text-[11px] mt-0.5 leading-none ${info.className}`}>{info.text}</p>
+          )}
         </div>
-        <span className="shrink-0 w-6 h-6 rounded-full bg-[#B34207]/10 flex items-center justify-center text-xs font-black text-[#B34207]">
-          {rank}
-        </span>
-      </div>
 
-      <p className="text-xs text-stone-500 leading-relaxed mb-3">{r.match_reason}</p>
+        {/* Price + chevron */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {drinkType !== 'cocktail' && r.cheapest_price != null && (
+            <span className="text-[#B34207] font-black text-sm">${Number(r.cheapest_price).toFixed(2)}</span>
+          )}
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+            className={`text-stone-300 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}>
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </div>
+      </button>
 
-      <div className="flex items-center gap-2 flex-wrap mb-3">
-        {drinkType === 'cocktail' ? (
-          r.tags.slice(1).length > 0
-            ? r.tags.slice(1).map(tag => (
-                <span key={tag} className="text-[11px] bg-[#fef9f0] text-[#b45309] border border-[#fde8c4] px-2 py-0.5 rounded-full font-semibold capitalize">
-                  {formatTag(tag)}
-                </span>
-              ))
-            : <span className="text-[11px] text-stone-400 italic">No tags available</span>
-        ) : (
-          <>
-            {r.cheapest_price != null ? (
-              <>
-                <span className="text-[#B34207] font-black text-lg leading-none">${Number(r.cheapest_price).toFixed(2)}</span>
-                <span className="text-[10px] text-stone-400">cheapest pint</span>
-              </>
-            ) : (
-              <span className="text-[11px] text-stone-400 italic">Price info unavailable</span>
-            )}
-            {r.is_happy_hour && (
-              <span className="text-[10px] bg-[#F5A623]/10 text-[#b45309] border border-[#F5A623]/25 px-1.5 py-0.5 rounded-full font-semibold">
-                🍻 Happy Hour
+      {/* ── Expanded detail ── */}
+      {isExpanded && (
+        <div className="px-5 pb-4 border-t border-[#fde8c4] animate-expandDown">
+          <p className="text-xs text-stone-500 leading-relaxed mt-3 mb-3">{r.match_reason}</p>
+
+          {/* HH window */}
+          {r.happy_hour_start && r.happy_hour_end && (
+            <div className="mb-2.5">
+              <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-full ${
+                r.is_happy_hour
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                  : 'bg-[#fef9f0] text-stone-500 border border-[#e8dcc8]'
+              }`}>
+                {r.is_happy_hour ? '🍻' : '🕐'} Happy Hour {formatHHTime(r.happy_hour_start)}–{formatHHTime(r.happy_hour_end)}
+                {r.happy_hour_days && ` · ${formatHHDays(r.happy_hour_days)}`}
               </span>
-            )}
-          </>
-        )}
-      </div>
+            </div>
+          )}
 
-      <div className="flex items-center gap-2 pt-2.5 border-t border-[#fde8c4]">
-        <a
-          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(r.bar_name + ' Vancouver BC')}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-xs font-black px-3 py-1.5 rounded-lg bg-[#B34207] hover:bg-[#8f3506] text-white transition-colors"
-        >
-          📍 Directions
-        </a>
-        <button
-          onClick={onAddToMyNight}
-          disabled={isAdded}
-          className={`inline-flex items-center gap-1 text-xs font-black px-3 py-1.5 rounded-lg border transition-all ${
-            isAdded
-              ? 'bg-amber-50 border-amber-200 text-amber-700'
-              : 'bg-[#fef9f0] border-[#e8dcc8] text-[#1c1917] hover:border-[#B34207]/40'
-          }`}
-        >
-          {isAdded ? '✓ Added' : '+ My Night'}
-        </button>
-      </div>
+          {/* Tags */}
+          {r.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              {r.tags.slice(0, 4).map(t => (
+                <span key={t} className="text-[10px] bg-[#fef9f0] text-stone-500 border border-[#e8dcc8] px-1.5 py-0.5 rounded-full capitalize">
+                  {formatTag(t)}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex items-center gap-2 pt-3 border-t border-[#fde8c4]">
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(r.bar_name + ' Vancouver BC')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-xs font-black px-3 py-1.5 rounded-lg bg-[#B34207] hover:bg-[#8f3506] text-white transition-colors"
+            >
+              📍 Directions
+            </a>
+            <button
+              onClick={e => { e.stopPropagation(); onAddToMyNight(); }}
+              disabled={isAdded}
+              className={`inline-flex items-center gap-1 text-xs font-black px-3 py-1.5 rounded-lg border transition-all ${
+                isAdded
+                  ? 'bg-amber-50 border-amber-200 text-amber-700'
+                  : 'bg-[#fef9f0] border-[#e8dcc8] text-[#1c1917] hover:border-[#B34207]/40'
+              }`}
+            >
+              {isAdded ? '✓ Added' : '+ My Picks'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
