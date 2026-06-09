@@ -68,7 +68,6 @@ export default function CrawlBuilderClient({
   // Filters
   const [vibe, setVibe] = useState<VibeId>('mixed');
   const [budget, setBudget] = useState(30);
-  const [happyHourOnly, setHappyHourOnly] = useState(false);
 
   // Shared
   const [barCount, setBarCount] = useState(4);
@@ -142,7 +141,7 @@ export default function CrawlBuilderClient({
     setCrawl(null);
     try {
       const day = DAY_SHORT[new Date().getDay()];
-      const shared = { barCount, startTime, day, vibe, budget, happyHourOnly };
+      const shared = { barCount, startTime, day, vibe, budget };
       const body =
         mode === 'neighbourhood'
           ? { ...shared, neighbourhood }
@@ -337,30 +336,6 @@ export default function CrawlBuilderClient({
               </span>
               <span className="text-stone-400">$80</span>
             </div>
-          </div>
-
-          {/* ── Happy hour toggle ──────────────────────────────────────── */}
-          <div className="flex items-center justify-between gap-4 py-1">
-            <div>
-              <p className="text-sm font-black text-[#1c1917]">Happy hour stops only</p>
-              <p className="text-xs text-stone-400 mt-0.5">
-                Every stop must have active HH at arrival time
-              </p>
-            </div>
-            <button
-              onClick={() => setHappyHourOnly(v => !v)}
-              className={`shrink-0 relative inline-flex h-7 w-12 items-center rounded-full transition-colors duration-200 border ${
-                happyHourOnly
-                  ? 'bg-[#B34207] border-[#B34207]'
-                  : 'bg-[#fef9f0] border-[#fde8c4]'
-              }`}
-            >
-              <span
-                className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${
-                  happyHourOnly ? 'translate-x-6' : 'translate-x-1'
-                }`}
-              />
-            </button>
           </div>
 
           {/* ── Number of stops ────────────────────────────────────────── */}
