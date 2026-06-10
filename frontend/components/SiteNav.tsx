@@ -9,7 +9,7 @@ import CommunityPopup from './CommunityPopup';
 import { useMyNightContext } from '@/lib/myNightContext';
 
 const NAV_LINKS = [
-  { emoji: '🏆', label: 'World Cup Mode', href: null, comingSoon: true },
+  { emoji: '🏆', label: 'World Cup Mode', href: '/world-cup', comingSoon: false },
   { emoji: '🗺', label: 'Bar Map', href: '/bar-map', comingSoon: false },
   { emoji: '📢', label: 'Advertise With Us', href: '/advertise', comingSoon: false },
   { emoji: '🍺', label: 'Submit a Price', href: '/submit-price', comingSoon: false },
@@ -215,11 +215,15 @@ export default function SiteNav() {
             <span className="text-[9px] text-stone-300 leading-none mt-0.5">Try me!</span>
           </Link>
 
-          <div className="flex-1 flex flex-col items-center justify-center py-2.5 gap-0 text-xs font-black text-stone-400 cursor-default select-none opacity-50">
+          <Link
+            href="/world-cup"
+            className={`flex-1 flex flex-col items-center justify-center py-2 gap-0 text-xs font-black transition-colors ${
+              pathname === '/world-cup' ? 'text-[#B34207]' : 'text-[#1c1917]'
+            }`}
+          >
             <span className="text-[20px] leading-none">⚽</span>
             <span className="mt-0.5">World Cup</span>
-            <span className="text-[9px] leading-none mt-0.5">Coming Soon!</span>
-          </div>
+          </Link>
         </div>
       </nav>
 
