@@ -61,8 +61,8 @@ export default async function WorldCupPage() {
         id, match_date, kickoff_time, group_label, venue,
         team_home, team_away, flag_home, flag_away,
         is_vancouver_match, supporters_bar_label,
-        supporters_bar:bars!wc_matches_supporters_bar_id_fkey(id, name, neighbourhood),
-        neutral_bar:bars!wc_matches_neutral_bar_id_fkey(
+        supporters_bar:bars!supporters_bar_id(id, name, neighbourhood),
+        neutral_bar:bars!neutral_bar_id(
           id, name, neighbourhood,
           pint_prices(price_cad, happy_hour_price_cad, category),
           happy_hour_windows(days, start_time, end_time)
@@ -84,6 +84,10 @@ export default async function WorldCupPage() {
       .select('id, country, flag, bar_id, venue_name, neighbourhood, notes, verified, bar:bars(id, name, neighbourhood)')
       .order('country'),
   ]);
+
+  if (matchesRes.error) console.error('[wc] matches query error:', matchesRes.error.message);
+  if (nextRes.error)    console.error('[wc] next query error:', nextRes.error.message);
+  if (supportersRes.error) console.error('[wc] supporters query error:', supportersRes.error.message);
 
   const todayMatches = (matchesRes.data ?? []) as unknown as WcMatch[];
   const nextMatch = (nextRes.data?.[0] ?? null) as WcMatch | null;
