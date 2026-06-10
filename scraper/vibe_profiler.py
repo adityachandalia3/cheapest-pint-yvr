@@ -79,7 +79,10 @@ Produce two things:
      cheap_pints, patio, rooftop, late_night, first_date, date_night,
      group_friendly, solo_friendly, after_work, pre_drink, college_crowd,
      live_music, trivia_night, pool_table, dog_friendly, waterfront, cozy,
-     lively, upscale, historic, brewery_attached
+     lively, upscale, historic, brewery_attached, food_destination
+
+   Use food_destination only when reviews consistently highlight the food as \
+   a reason to visit — not just because food is available.
 
    crowd — who actually shows up and when. Be specific: day of week matters,
      and mix matters (e.g. "industry workers post-shift, neighbourhood \
@@ -249,7 +252,7 @@ def process_bar(
     return result
 
 
-def load_bars(sb: Client, limit: Optional[int] = None, bar_id: Optional[str] = None, no_vibe: bool = False) -> list[dict]:
+def load_bars(sb: Client, limit: Optional[int] = None, bar_id: Optional[str] = None, no_vibe: bool = False, has_reviews: bool = False) -> list[dict]:
     query = (
         sb.table("bars")
         .select(
@@ -266,6 +269,8 @@ def load_bars(sb: Client, limit: Optional[int] = None, bar_id: Optional[str] = N
         query = query.is_("vibe_profile", "null")
     else:
         query = query.neq("price_entry_count", 0)
+    if has_reviews:
+        query = query.gt("review_count", 0)
     if limit:
         query = query.limit(limit)
     return query.execute().data
@@ -278,6 +283,7 @@ def main() -> None:
     mode.add_argument("--all", action="store_true", help="Run on all bars with price data")
     mode.add_argument("--bar-id", type=str, help="Run on a single bar by UUID")
     parser.add_argument("--no-vibe", action="store_true", help="Target bars with no vibe profile (ignores price_entry_count filter)")
+    parser.add_argument("--has-reviews", action="store_true", help="Only process bars with at least one Google review")
     parser.add_argument(
         "--model",
         default="claude-sonnet-4-6",
@@ -298,7 +304,7 @@ def main() -> None:
         print("\n\nReview the profiles above. Run with --all to process all bars.")
 
     elif args.all:
-        bars = load_bars(sb, no_vibe=args.no_vibe)
+        bars = load_bars(sb, no_vibe=args.no_vibe, has_reviews=args.has_reviews)
         print(f"Processing {len(bars)} bars...\n")
         ok = fail = 0
         for bar in bars:
