@@ -11,7 +11,7 @@ import type { WcMatch, SupportersBar, NeutralBarData } from './page';
 const SCALE_SIDE = 0.92;
 const OPACITY_SIDE = 0.55;
 const PEEK_MOBILE = 28;
-const PEEK_DESKTOP = 96;
+const PEEK_DESKTOP = 160;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -356,7 +356,7 @@ export default function WorldCupClient({
           {/* Carousel stage */}
           <div
             ref={containerRef}
-            className="relative w-full overflow-hidden h-[210px]"
+            className="relative w-full overflow-hidden h-[210px] md:h-[460px]"
             onTouchStart={e => { touchStartX.current = e.touches[0].clientX; hasSwiped.current = false; }}
             onTouchMove={e => {
               if (touchStartX.current === null) return;
