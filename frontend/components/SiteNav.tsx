@@ -136,7 +136,11 @@ export default function SiteNav() {
                     key={link.href}
                     href={link.href!}
                     onClick={() => setDesktopMoreOpen(false)}
-                    className="flex items-center gap-2 px-4 py-3 text-[#1c1917] text-sm font-semibold hover:bg-[#fef9f0] transition-colors border-b border-[#fde8c4]/60 last:border-0"
+                    className="flex items-center gap-2 px-4 py-3 text-sm font-semibold transition-colors border-b border-[#fde8c4]/60 last:border-0"
+                    style={link.href === '/world-cup' ? {
+                      background: 'linear-gradient(135deg, #0E1B3D, #16275A)',
+                      color: '#FFD966',
+                    } : { color: '#1c1917' }}
                   >
                     <span>{link.emoji}</span>
                     {link.label}
@@ -217,11 +221,10 @@ export default function SiteNav() {
 
           <Link
             href="/world-cup"
-            className={`flex-1 flex flex-col items-center justify-center py-2 gap-0 text-xs font-black transition-colors ${
-              pathname === '/world-cup' ? 'text-[#B34207]' : 'text-[#1c1917]'
-            }`}
+            className="flex-1 flex flex-col items-center justify-center py-2 gap-0 text-xs font-black transition-colors text-[#FFD966]"
+            style={{ background: 'linear-gradient(180deg, #0E1B3D 0%, #16275A 100%)' }}
           >
-            <span className="text-[20px] leading-none">⚽</span>
+            <span className="text-[20px] leading-none">🏆</span>
             <span className="mt-0.5">World Cup</span>
           </Link>
         </div>
@@ -266,7 +269,11 @@ export default function SiteNav() {
                 key={link.href}
                 href={link.href!}
                 onClick={() => setMoreOpen(false)}
-                className="flex items-center gap-2.5 px-6 py-3.5 text-[#1c1917] text-sm font-semibold hover:bg-[#fef9f0] transition-colors border-b border-[#fde8c4]/60 last:border-0"
+                className="flex items-center gap-2.5 px-6 py-3.5 text-sm font-semibold transition-colors border-b border-[#fde8c4]/60 last:border-0"
+                style={link.href === '/world-cup' ? {
+                  background: 'linear-gradient(135deg, #0E1B3D, #16275A)',
+                  color: '#FFD966',
+                } : { color: '#1c1917' }}
               >
                 <span>{link.emoji}</span>
                 {link.label}

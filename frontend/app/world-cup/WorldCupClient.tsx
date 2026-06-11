@@ -6,6 +6,8 @@ import posthog from 'posthog-js';
 import type { WcMatch, SupportersBar, NeutralBarData } from './page';
 import { getTeamColors } from '@/lib/teamColors';
 
+const LOADING_EMOJIS = ['🇲🇽', '🇨🇦', '🇺🇸', '🇧🇷', '🇩🇪', '🏴󠁧󠁢󠁥󠁮󠁧󠁿', '🇦🇷'];
+
 const SCALE_SIDE = 0.92;
 const OPACITY_SIDE = 0.55;
 const PEEK_MOBILE = 28;
@@ -298,6 +300,9 @@ export default function WorldCupClient({
   const [expandedCountryId, setExpandedCountryId] = useState<string | null>(null);
   const [showAllCountries, setShowAllCountries] = useState(false);
   const [now, setNow] = useState(new Date());
+  const [emojiIdx, setEmojiIdx] = useState(0);
+  const [loadingVisible, setLoadingVisible] = useState(true);
+  const [loadingFading, setLoadingFading] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef<number | null>(null);
@@ -319,6 +324,20 @@ export default function WorldCupClient({
 
   useEffect(() => {
     posthog.capture('wc_page_viewed');
+  }, []);
+
+  const loadingOnTrophy = emojiIdx === LOADING_EMOJIS.length;
+
+  useEffect(() => {
+    // one pass: 7 flags × 150ms = 1050ms, then trophy holds for 1s, then 300ms fade
+    const flagDuration = LOADING_EMOJIS.length * 150;
+    const interval = setInterval(() => setEmojiIdx(i => {
+      if (i >= LOADING_EMOJIS.length) return i;
+      return i + 1;
+    }), 150);
+    const fadeStart = setTimeout(() => setLoadingFading(true), flagDuration + 1000);
+    const stop = setTimeout(() => { clearInterval(interval); setLoadingVisible(false); }, flagDuration + 1300);
+    return () => { clearInterval(interval); clearTimeout(fadeStart); clearTimeout(stop); };
   }, []);
 
   // Remaining + live today (kickoff + 2h window has not closed)
@@ -368,12 +387,32 @@ export default function WorldCupClient({
   });
 
   return (
-    <main
-      style={{
-        background: 'linear-gradient(180deg, #0E1B3D 0%, #16275A 55%, #1B2C5C 100%)',
-        minHeight: '100vh',
-      }}
-    >
+    <>
+      {loadingVisible && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          background: 'linear-gradient(180deg, #0E1B3D 0%, #16275A 55%, #1B2C5C 100%)',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          gap: 12,
+          transition: 'opacity 0.3s ease',
+          opacity: loadingFading ? 0 : 1,
+        }}>
+          {loadingOnTrophy ? (
+            <img src="/wc-trophy.png" alt="World Cup Trophy" style={{ height: 56, width: 'auto' }} />
+          ) : (
+            <span style={{ fontSize: 56, lineHeight: 1 }}>{LOADING_EMOJIS[emojiIdx]}</span>
+          )}
+          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', margin: 0 }}>
+            Entering World Cup mode...
+          </p>
+        </div>
+      )}
+      <main
+        style={{
+          background: 'linear-gradient(180deg, #0E1B3D 0%, #16275A 55%, #1B2C5C 100%)',
+          minHeight: '100vh',
+        }}
+      >
       {/* Festival ribbon */}
       <div style={{
         height: 4,
@@ -408,7 +447,7 @@ export default function WorldCupClient({
           <>
             <div
               ref={containerRef}
-              className="relative w-full overflow-hidden h-[165px] md:h-[260px]"
+              className="relative w-full overflow-hidden h-[132px] md:h-[208px]"
               onTouchStart={e => { touchStartX.current = e.touches[0].clientX; hasSwiped.current = false; }}
               onTouchMove={e => {
                 if (touchStartX.current === null) return;
@@ -441,33 +480,33 @@ export default function WorldCupClient({
                   </div>
                 );
               })}
-            </div>
 
-            {/* Arrow buttons — desktop only */}
-            {count > 1 && (
-              <div className="relative">
-                <button
-                  onClick={() => go(-1)}
-                  className="hidden md:flex absolute left-4 -top-[250px] w-10 h-10 items-center justify-center rounded-full transition-colors z-20"
-                  style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)' }}
-                  aria-label="Previous match"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M15 18l-6-6 6-6" />
-                  </svg>
-                </button>
-                <button
-                  onClick={() => go(1)}
-                  className="hidden md:flex absolute right-4 -top-[250px] w-10 h-10 items-center justify-center rounded-full transition-colors z-20"
-                  style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)' }}
-                  aria-label="Next match"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M9 18l6-6-6-6" />
-                  </svg>
-                </button>
-              </div>
-            )}
+              {/* Arrow buttons — inside carousel, always vertically centred */}
+              {count > 1 && (
+                <>
+                  <button
+                    onClick={() => go(-1)}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-full transition-colors z-20"
+                    style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)' }}
+                    aria-label="Previous match"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M15 18l-6-6 6-6" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => go(1)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-full transition-colors z-20"
+                    style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)' }}
+                    aria-label="Next match"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M9 18l6-6-6-6" />
+                    </svg>
+                  </button>
+                </>
+              )}
+            </div>
 
             {/* Dot indicators */}
             {count > 1 && (
@@ -573,5 +612,6 @@ export default function WorldCupClient({
 
       </div>
     </main>
+    </>
   );
 }
