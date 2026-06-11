@@ -87,7 +87,7 @@ export default function FeaturedVenuesCarousel() {
   }, [count]);
 
   return (
-    <div className="pt-2 pb-1 md:flex md:flex-col md:flex-1">
+    <div className="pt-2 pb-1">
       {/* Section header — desktop only */}
       <div className="hidden md:flex items-center justify-between pb-2 max-w-2xl md:max-w-3xl mx-auto px-4">
         <div className="flex items-center gap-1.5">
@@ -108,7 +108,7 @@ export default function FeaturedVenuesCarousel() {
       {/* Carousel */}
       <div
         ref={containerRef}
-        className="relative w-full overflow-hidden h-[180px] md:flex-1"
+        className="relative w-full overflow-hidden h-[180px] md:h-[270px]"
         onTouchStart={e => { touchStartX.current = e.touches[0].clientX; hasSwiped.current = false; }}
         onTouchMove={e => {
           if (touchStartX.current === null) return;

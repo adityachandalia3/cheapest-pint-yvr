@@ -1,11 +1,14 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import posthog from 'posthog-js';
-import type { WcMatch, SupportersBar, NeutralBarData } from './page';
+import type { WcMatch, SupportersBar, NeutralBarData, WcScreeningBar } from './page';
 import { getTeamColors } from '@/lib/teamColors';
 import FeaturedVenuesCarousel from './FeaturedVenuesCarousel';
+
+const WcScreeningMap = dynamic(() => import('./WcScreeningMap'), { ssr: false });
 
 const LOADING_EMOJIS = ['🇲🇽', '🇨🇦', '🇺🇸', '🇧🇷', '🇩🇪', '🏴󠁧󠁢󠁥󠁮󠁧󠁿', '🇦🇷'];
 
@@ -380,10 +383,12 @@ export default function WorldCupClient({
   todayMatches,
   upcomingMatches,
   supportersBars,
+  screeningBars,
 }: {
   todayMatches: WcMatch[];
   upcomingMatches: WcMatch[];
   supportersBars: SupportersBar[];
+  screeningBars: WcScreeningBar[];
 }) {
   const [index, setIndex] = useState(0);
   const [containerWidth, setContainerWidth] = useState(0);
@@ -463,6 +468,15 @@ export default function WorldCupClient({
     posthog.capture('wc_match_swiped', { direction: dir === 1 ? 'next' : 'prev' });
   }, [count]);
 
+  // bar_id → { country, flag } for gold pin lookup
+  const supportersBarMap = useMemo(() => {
+    const map: Record<string, { country: string; flag: string }> = {};
+    for (const sb of supportersBars) {
+      if (sb.bar_id) map[sb.bar_id] = { country: sb.country, flag: sb.flag };
+    }
+    return map;
+  }, [supportersBars]);
+
   const filteredSupportersBars = supportersBars.filter(
     sb => sb.country !== 'Italy' && sb.country !== 'Ireland'
   );
@@ -498,7 +512,6 @@ export default function WorldCupClient({
         </div>
       )}
       <main
-        className="md:flex md:flex-col"
         style={{
           background: 'linear-gradient(180deg, #0E1B3D 0%, #16275A 55%, #1B2C5C 100%)',
           minHeight: '100vh',
@@ -623,10 +636,10 @@ export default function WorldCupClient({
 
       {/* ── Desktop: Featured Venues (left) + Supporters Bars (right) ── */}
       {/* ── Mobile: stacked as before ──────────────────────────────────── */}
-      <div className="md:flex md:items-stretch md:pt-2 md:flex-1">
+      <div className="md:flex md:items-start md:pt-2">
 
         {/* Left half: Featured Venues Carousel */}
-        <div className="md:w-1/2 md:min-w-0 md:flex md:flex-col">
+        <div className="md:w-1/2 md:min-w-0">
           <FeaturedVenuesCarousel />
         </div>
 
@@ -687,6 +700,28 @@ export default function WorldCupClient({
             })()}
           </div>
         )}
+      </div>
+
+      {/* ── WHERE TO WATCH map ───────────────────────────────────────── */}
+      <div>
+        <div className="flex items-center justify-between px-4 pt-4 pb-2">
+          <div className="flex items-center gap-1.5">
+            <span className="relative flex h-2 w-2 shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+            </span>
+            <span
+              className="text-[11px] font-black uppercase tracking-widest"
+              style={{ color: 'rgba(255,255,255,0.92)' }}
+            >
+              Where to Watch
+            </span>
+          </div>
+          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)' }}>
+            {screeningBars.length} confirmed venues
+          </span>
+        </div>
+        <WcScreeningMap screeningBars={screeningBars} supportersBarMap={supportersBarMap} />
       </div>
 
       {/* ── Cheapest pint CTA — mobile: inline card, desktop: fixed bottom bar ── */}

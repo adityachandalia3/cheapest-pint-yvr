@@ -29,6 +29,14 @@ export type NeutralBarData = {
   happy_hour_windows: Array<{ days: string[]; start_time: string; end_time: string }>;
 };
 
+export type WcScreeningBar = {
+  id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  neighbourhood: string | null;
+};
+
 export type WcMatch = {
   id: string;
   match_date: string;
@@ -66,7 +74,7 @@ export default async function WorldCupPage() {
     )
   `;
 
-  const [matchesRes, upcomingRes, supportersRes] = await Promise.all([
+  const [matchesRes, upcomingRes, supportersRes, screeningRes] = await Promise.all([
     // All of today's matches — client filters to remaining/live ones
     sb.from('wc_matches').select(matchSelect).eq('match_date', today).order('kickoff_time'),
 
@@ -79,21 +87,31 @@ export default async function WorldCupPage() {
     sb.from('supporters_bars')
       .select('id, country, flag, bar_id, venue_name, neighbourhood, notes, verified, bar:bars(id, name, neighbourhood)')
       .order('country'),
+
+    // Bars confirmed to be screening — used for the WC map
+    sb.from('bars')
+      .select('id, name, latitude, longitude, neighbourhood')
+      .eq('screening_confirmed', true)
+      .not('latitude', 'is', null)
+      .not('longitude', 'is', null),
   ]);
 
-  if (matchesRes.error)  console.error('[wc] matches query error:', matchesRes.error.message);
-  if (upcomingRes.error) console.error('[wc] upcoming query error:', upcomingRes.error.message);
+  if (matchesRes.error)   console.error('[wc] matches query error:', matchesRes.error.message);
+  if (upcomingRes.error)  console.error('[wc] upcoming query error:', upcomingRes.error.message);
   if (supportersRes.error) console.error('[wc] supporters query error:', supportersRes.error.message);
+  if (screeningRes.error) console.error('[wc] screening query error:', screeningRes.error.message);
 
-  const todayMatches    = (matchesRes.data  ?? []) as unknown as WcMatch[];
-  const upcomingMatches = (upcomingRes.data ?? []) as unknown as WcMatch[];
+  const todayMatches    = (matchesRes.data   ?? []) as unknown as WcMatch[];
+  const upcomingMatches = (upcomingRes.data  ?? []) as unknown as WcMatch[];
   const supportersBars  = (supportersRes.data ?? []) as unknown as SupportersBar[];
+  const screeningBars   = (screeningRes.data  ?? []) as unknown as WcScreeningBar[];
 
   return (
     <WorldCupClient
       todayMatches={todayMatches}
       upcomingMatches={upcomingMatches}
       supportersBars={supportersBars}
+      screeningBars={screeningBars}
     />
   );
 }
