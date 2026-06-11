@@ -160,7 +160,8 @@ function SectionHeader({ children, right }: { children: React.ReactNode; right?:
   );
 }
 
-function MatchCardInner({ match, now, supportersBars }: { match: WcMatch; now: Date; supportersBars: SupportersBar[] }) {
+function MatchCardInner({ match, now, supportersBars, fontScale = 1 }: { match: WcMatch; now: Date; supportersBars: SupportersBar[]; fontScale?: number }) {
+  const s = (n: number) => n * fontScale;
   const isVan = match.is_vancouver_match;
   const homeColors = getTeamColors(match.team_home);
   const awayColors = getTeamColors(match.team_away);
@@ -203,7 +204,7 @@ function MatchCardInner({ match, now, supportersBars }: { match: WcMatch; now: D
         {/* Status badge — top centre */}
         <div className="flex justify-center">
           <span style={{
-            fontSize: 8, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.09em',
+            fontSize: s(8), fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.09em',
             color: '#FFD966', background: 'rgba(255,255,255,0.08)',
             border: '1px solid rgba(255,217,102,0.35)',
             borderRadius: 100, padding: '3px 10px', whiteSpace: 'nowrap',
@@ -215,11 +216,11 @@ function MatchCardInner({ match, now, supportersBars }: { match: WcMatch; now: D
         {/* Teams */}
         <div className="flex items-center justify-between flex-1 min-h-0 px-1">
           <div className="flex flex-col items-center gap-1 w-[38%] text-center">
-            <span style={{ fontSize: 32, lineHeight: 1, filter: 'drop-shadow(0 3px 8px rgba(0,0,0,0.45))' }}>
+            <span style={{ fontSize: s(32), lineHeight: 1, filter: 'drop-shadow(0 3px 8px rgba(0,0,0,0.45))' }}>
               {match.flag_home}
             </span>
             <span style={{
-              fontSize: 9, fontWeight: 900, color: '#FFFFFF',
+              fontSize: s(9), fontWeight: 900, color: '#FFFFFF',
               textTransform: 'uppercase', letterSpacing: '0.05em', lineHeight: 1.2,
             }}>
               {match.team_home}
@@ -228,18 +229,18 @@ function MatchCardInner({ match, now, supportersBars }: { match: WcMatch; now: D
 
           <div style={{
             background: 'rgba(255,255,255,0.12)', borderRadius: 100,
-            padding: '4px 10px', fontSize: 9, fontWeight: 900,
+            padding: '4px 10px', fontSize: s(9), fontWeight: 900,
             color: 'rgba(255,255,255,0.7)', flexShrink: 0,
           }}>
             VS
           </div>
 
           <div className="flex flex-col items-center gap-1 w-[38%] text-center">
-            <span style={{ fontSize: 32, lineHeight: 1, filter: 'drop-shadow(0 3px 8px rgba(0,0,0,0.45))' }}>
+            <span style={{ fontSize: s(32), lineHeight: 1, filter: 'drop-shadow(0 3px 8px rgba(0,0,0,0.45))' }}>
               {match.flag_away}
             </span>
             <span style={{
-              fontSize: 9, fontWeight: 900, color: '#FFFFFF',
+              fontSize: s(9), fontWeight: 900, color: '#FFFFFF',
               textTransform: 'uppercase', letterSpacing: '0.05em', lineHeight: 1.2,
             }}>
               {match.team_away}
@@ -248,7 +249,7 @@ function MatchCardInner({ match, now, supportersBars }: { match: WcMatch; now: D
         </div>
 
         {/* Kickoff line */}
-        <div className="text-center" style={{ fontSize: 9 }}>
+        <div className="text-center" style={{ fontSize: s(9) }}>
           <span style={{ color: 'rgba(255,255,255,0.92)', fontWeight: 600 }}>
             {formatMatchDate(match.match_date)} · {formatKickoff(match.kickoff_time)}
           </span>
@@ -277,7 +278,7 @@ function MatchCardInner({ match, now, supportersBars }: { match: WcMatch; now: D
               color: '#FFD966',
               borderRadius: 999,
               padding: '4px 10px',
-              fontSize: 9,
+              fontSize: s(9),
               fontWeight: 600,
               textDecoration: 'none',
             }}
@@ -301,7 +302,7 @@ function MatchCardInner({ match, now, supportersBars }: { match: WcMatch; now: D
                 onClick={e => e.stopPropagation()}
                 style={{
                   background: '#FFD966', color: '#14110c',
-                  fontSize: 9, fontWeight: 700,
+                  fontSize: s(9), fontWeight: 700,
                   padding: '3px 9px', borderRadius: 100,
                   textDecoration: 'none', whiteSpace: 'nowrap',
                 }}
@@ -319,7 +320,7 @@ function MatchCardInner({ match, now, supportersBars }: { match: WcMatch; now: D
                   background: 'rgba(255,255,255,0.14)',
                   border: '1px solid rgba(255,255,255,0.25)',
                   color: 'rgba(255,255,255,0.92)',
-                  fontSize: 9, fontWeight: 700,
+                  fontSize: s(9), fontWeight: 700,
                   padding: '3px 9px', borderRadius: 100,
                   textDecoration: 'none', whiteSpace: 'nowrap',
                 }}
@@ -335,8 +336,8 @@ function MatchCardInner({ match, now, supportersBars }: { match: WcMatch; now: D
 }
 
 // Carousel variant — fills the full card slot
-function MatchCard({ match, now, supportersBars }: { match: WcMatch; now: Date; supportersBars: SupportersBar[] }) {
-  return <MatchCardInner match={match} now={now} supportersBars={supportersBars} />;
+function MatchCard({ match, now, supportersBars, fontScale = 1 }: { match: WcMatch; now: Date; supportersBars: SupportersBar[]; fontScale?: number }) {
+  return <MatchCardInner match={match} now={now} supportersBars={supportersBars} fontScale={fontScale} />;
 }
 
 function CountryDetail({ sb }: { sb: SupportersBar }) {
@@ -497,6 +498,7 @@ export default function WorldCupClient({
         </div>
       )}
       <main
+        className="md:flex md:flex-col"
         style={{
           background: 'linear-gradient(180deg, #0E1B3D 0%, #16275A 55%, #1B2C5C 100%)',
           minHeight: '100vh',
@@ -536,7 +538,7 @@ export default function WorldCupClient({
           <>
             <div
               ref={containerRef}
-              className="relative w-full overflow-hidden h-[145px] md:h-[229px]"
+              className="relative w-full overflow-hidden h-[145px] md:h-[310px]"
               onTouchStart={e => { touchStartX.current = e.touches[0].clientX; hasSwiped.current = false; }}
               onTouchMove={e => {
                 if (touchStartX.current === null) return;
@@ -565,7 +567,7 @@ export default function WorldCupClient({
                       ...getCardStyle(diff),
                     }}
                   >
-                    <MatchCard match={match} now={now} supportersBars={supportersBars} />
+                    <MatchCard match={match} now={now} supportersBars={supportersBars} fontScale={isMobile ? 1 : 1.5} />
                   </div>
                 );
               })}
@@ -619,15 +621,18 @@ export default function WorldCupClient({
         )}
       </div>
 
-      {/* ── Featured Venues ──────────────────────────────────────────── */}
-      <FeaturedVenuesCarousel />
+      {/* ── Desktop: Featured Venues (left) + Supporters Bars (right) ── */}
+      {/* ── Mobile: stacked as before ──────────────────────────────────── */}
+      <div className="md:flex md:items-stretch md:pt-2 md:flex-1">
 
-      {/* ── Constrained sections ──────────────────────────────────────── */}
-      <div className="max-w-2xl md:max-w-3xl mx-auto pb-8">
+        {/* Left half: Featured Venues Carousel */}
+        <div className="md:w-1/2 md:min-w-0 md:flex md:flex-col">
+          <FeaturedVenuesCarousel />
+        </div>
 
-        {/* Find Your Country's Bar */}
+        {/* Right half: Find Your Country's Bar */}
         {filteredSupportersBars.length > 0 && (
-          <div className="px-4 pt-4 pb-2">
+          <div className="md:w-1/2 md:shrink-0 px-4 md:px-4 pt-4 md:pt-3 pb-2 md:border-l md:border-white/20">
             <SectionHeader>Find Your Country&apos;s Bar</SectionHeader>
 
             <div className="flex flex-wrap gap-1.5">
@@ -682,8 +687,10 @@ export default function WorldCupClient({
             })()}
           </div>
         )}
+      </div>
 
-        {/* Cheapest pint CTA — stays cream to bridge back to the main app */}
+      {/* ── Cheapest pint CTA — mobile: inline card, desktop: fixed bottom bar ── */}
+      <div className="md:hidden max-w-2xl mx-auto pb-8">
         <div className="px-4 pt-3 pb-4">
           <Link
             href="/"
@@ -701,7 +708,25 @@ export default function WorldCupClient({
             </div>
           </Link>
         </div>
-
+      </div>
+      <div
+        className="hidden md:block sticky bottom-0 z-40"
+        style={{ background: '#fffbeb', borderTop: '1px solid #e8dcc8' }}
+      >
+        <Link
+          href="/"
+          onClick={() => posthog.capture('wc_screening_cta_tapped')}
+          className="flex items-center justify-between gap-4 px-8 py-3 hover:bg-[#fef3e2] transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-xl">📍</span>
+            <div>
+              <p className="text-sm font-black text-[#1c1410]">Cheapest pint near a screening</p>
+              <p className="text-xs text-[#a0855a]">Match-day deals sorted by price, near you</p>
+            </div>
+          </div>
+          <span className="text-sm font-black text-[#B34207] whitespace-nowrap">Find deals →</span>
+        </Link>
       </div>
     </main>
     </>
