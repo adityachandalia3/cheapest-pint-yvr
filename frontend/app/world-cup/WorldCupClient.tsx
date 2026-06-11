@@ -408,7 +408,7 @@ export default function WorldCupClient({
           <>
             <div
               ref={containerRef}
-              className="relative w-full overflow-hidden h-[220px] md:h-[260px]"
+              className="relative w-full overflow-hidden h-[165px] md:h-[260px]"
               onTouchStart={e => { touchStartX.current = e.touches[0].clientX; hasSwiped.current = false; }}
               onTouchMove={e => {
                 if (touchStartX.current === null) return;
