@@ -54,49 +54,45 @@ export default async function WorldCupPage() {
 
   const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Vancouver' });
 
-  const [matchesRes, nextRes, supportersRes] = await Promise.all([
-    sb
-      .from('wc_matches')
-      .select(`
-        id, match_date, kickoff_time, group_label, venue,
-        team_home, team_away, flag_home, flag_away,
-        is_vancouver_match, supporters_bar_label,
-        supporters_bar:bars!supporters_bar_id(id, name, neighbourhood),
-        neutral_bar:bars!neutral_bar_id(
-          id, name, neighbourhood,
-          pint_prices(price_cad, happy_hour_price_cad, category),
-          happy_hour_windows(days, start_time, end_time)
-        )
-      `)
-      .eq('match_date', today)
-      .order('kickoff_time'),
+  const matchSelect = `
+    id, match_date, kickoff_time, group_label, venue,
+    team_home, team_away, flag_home, flag_away,
+    is_vancouver_match, supporters_bar_label,
+    supporters_bar:bars!supporters_bar_id(id, name, neighbourhood),
+    neutral_bar:bars!neutral_bar_id(
+      id, name, neighbourhood,
+      pint_prices(price_cad, happy_hour_price_cad, category),
+      happy_hour_windows(days, start_time, end_time)
+    )
+  `;
 
-    sb
-      .from('wc_matches')
-      .select('id, match_date, kickoff_time, group_label, venue, team_home, team_away, flag_home, flag_away, is_vancouver_match, supporters_bar_label')
+  const [matchesRes, upcomingRes, supportersRes] = await Promise.all([
+    // All of today's matches — client filters to remaining/live ones
+    sb.from('wc_matches').select(matchSelect).eq('match_date', today).order('kickoff_time'),
+
+    // Next 5 matches from future days — used to pad carousel to ≥3 cards
+    sb.from('wc_matches').select(matchSelect)
       .gt('match_date', today)
-      .order('match_date')
-      .order('kickoff_time')
-      .limit(1),
+      .order('match_date').order('kickoff_time')
+      .limit(5),
 
-    sb
-      .from('supporters_bars')
+    sb.from('supporters_bars')
       .select('id, country, flag, bar_id, venue_name, neighbourhood, notes, verified, bar:bars(id, name, neighbourhood)')
       .order('country'),
   ]);
 
-  if (matchesRes.error) console.error('[wc] matches query error:', matchesRes.error.message);
-  if (nextRes.error)    console.error('[wc] next query error:', nextRes.error.message);
+  if (matchesRes.error)  console.error('[wc] matches query error:', matchesRes.error.message);
+  if (upcomingRes.error) console.error('[wc] upcoming query error:', upcomingRes.error.message);
   if (supportersRes.error) console.error('[wc] supporters query error:', supportersRes.error.message);
 
-  const todayMatches = (matchesRes.data ?? []) as unknown as WcMatch[];
-  const nextMatch = (nextRes.data?.[0] ?? null) as WcMatch | null;
-  const supportersBars = (supportersRes.data ?? []) as unknown as SupportersBar[];
+  const todayMatches    = (matchesRes.data  ?? []) as unknown as WcMatch[];
+  const upcomingMatches = (upcomingRes.data ?? []) as unknown as WcMatch[];
+  const supportersBars  = (supportersRes.data ?? []) as unknown as SupportersBar[];
 
   return (
     <WorldCupClient
       todayMatches={todayMatches}
-      nextMatch={nextMatch}
+      upcomingMatches={upcomingMatches}
       supportersBars={supportersBars}
     />
   );

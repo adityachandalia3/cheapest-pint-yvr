@@ -54,7 +54,7 @@ function getNeutralBarPrice(bar: NeutralBarData, now: Date): { price: number | n
   return { price: cheapest, isHH };
 }
 
-function getStatusBadge(matchDate: string, kickoffTime: string, now: Date, teamHome: string, isVan: boolean): string {
+function getStatusBadge(matchDate: string, kickoffTime: string, now: Date, isVan: boolean): string {
   const todayStr = now.toLocaleDateString('sv-SE', { timeZone: 'America/Vancouver' });
   const nextDay = new Date(now);
   nextDay.setDate(nextDay.getDate() + 1);
@@ -66,11 +66,14 @@ function getStatusBadge(matchDate: string, kickoffTime: string, now: Date, teamH
 
   if (now >= kickoffUTC && now <= twoHoursAfter) return `LIVE NOW 🔴${vanSuffix}`;
   if (matchDate === todayStr) return `TODAY · KICKOFF ${formatKickoff(kickoffTime)}${vanSuffix}`;
-  if (matchDate === tomorrowStr) {
-    if (matchDate === '2026-06-11' && teamHome === 'Mexico') return `TOMORROW · TOURNAMENT OPENER${vanSuffix}`;
-    return `TOMORROW · ${formatKickoff(kickoffTime)}${vanSuffix}`;
-  }
-  return `${formatMatchDate(matchDate)} · ${formatKickoff(kickoffTime)}${vanSuffix}`;
+  if (matchDate === tomorrowStr) return `TOMORROW · ${formatKickoff(kickoffTime)}${vanSuffix}`;
+
+  // Further out: "FRI JUN 12 · 12:00 PM"
+  const [y, mo, d] = matchDate.split('-').map(Number);
+  const localDate = new Date(y, mo - 1, d);
+  const weekday = localDate.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
+  const month   = localDate.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+  return `${weekday} ${month} ${d} · ${formatKickoff(kickoffTime)}${vanSuffix}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -104,7 +107,7 @@ function MatchCardInner({ match, now }: { match: WcMatch; now: Date }) {
   const isVan = match.is_vancouver_match;
   const homeColors = getTeamColors(match.team_home);
   const awayColors = getTeamColors(match.team_away);
-  const status = getStatusBadge(match.match_date, match.kickoff_time, now, match.team_home, isVan);
+  const status = getStatusBadge(match.match_date, match.kickoff_time, now, isVan);
   const neutralPrice = match.neutral_bar ? getNeutralBarPrice(match.neutral_bar, now) : null;
   const hasBars = !!(match.supporters_bar || match.neutral_bar);
 
@@ -245,18 +248,6 @@ function MatchCard({ match, now }: { match: WcMatch; now: Date }) {
   return <MatchCardInner match={match} now={now} />;
 }
 
-// Standalone fallback variant — fills the carousel-equivalent area
-function NextMatchCard({ match, now }: { match: WcMatch; now: Date }) {
-  return (
-    <div
-      className="w-full overflow-hidden"
-      style={{ borderRadius: 16, minHeight: 210, position: 'relative' }}
-    >
-      <MatchCardInner match={match} now={now} />
-    </div>
-  );
-}
-
 function CountryDetail({ sb }: { sb: SupportersBar }) {
   const name = sb.bar?.name ?? sb.venue_name ?? sb.country;
   const hood = sb.bar?.neighbourhood ?? sb.neighbourhood;
@@ -295,16 +286,13 @@ function CountryDetail({ sb }: { sb: SupportersBar }) {
 // ---------------------------------------------------------------------------
 export default function WorldCupClient({
   todayMatches,
-  nextMatch,
+  upcomingMatches,
   supportersBars,
 }: {
   todayMatches: WcMatch[];
-  nextMatch: WcMatch | null;
+  upcomingMatches: WcMatch[];
   supportersBars: SupportersBar[];
 }) {
-  const hasMatches = todayMatches.length > 0;
-  const count = todayMatches.length;
-
   const [index, setIndex] = useState(0);
   const [containerWidth, setContainerWidth] = useState(0);
   const [expandedCountryId, setExpandedCountryId] = useState<string | null>(null);
@@ -332,6 +320,21 @@ export default function WorldCupClient({
   useEffect(() => {
     posthog.capture('wc_page_viewed');
   }, []);
+
+  // Remaining + live today (kickoff + 2h window has not closed)
+  const remainingToday = todayMatches.filter(
+    m => kickoffToUTC(m.match_date, m.kickoff_time).getTime() + 2 * 60 * 60 * 1000 > now.getTime()
+  );
+  // Pad with upcoming days until we have at least 3 cards
+  const displayMatches = remainingToday.length >= 3
+    ? remainingToday
+    : [...remainingToday, ...upcomingMatches.slice(0, 3 - remainingToday.length)];
+  const count = displayMatches.length;
+
+  // Keep index in bounds if displayMatches shrinks (e.g. a match finishes)
+  useEffect(() => {
+    if (count > 0 && index >= count) setIndex(0);
+  }, [count, index]);
 
   const isMobile = containerWidth > 0 ? containerWidth < 768 : true;
   const peek = isMobile ? PEEK_MOBILE : PEEK_DESKTOP;
@@ -391,17 +394,17 @@ export default function WorldCupClient({
             className="text-[10px] font-black uppercase tracking-widest"
             style={{ color: 'rgba(255,255,255,0.92)' }}
           >
-            {hasMatches ? "Today's Matches" : 'Match Schedule'}
+            {remainingToday.length > 0 ? "Today's Matches" : 'Match Schedule'}
           </span>
           <span className="text-[10px] font-semibold" style={{ color: 'rgba(255,255,255,0.55)' }}>
-            {hasMatches
-              ? `${todayStr} · ${todayMatches.length} match${todayMatches.length !== 1 ? 'es' : ''}`
+            {remainingToday.length > 0
+              ? `${todayStr} · ${remainingToday.length} match${remainingToday.length !== 1 ? 'es' : ''}`
               : todayStr}
           </span>
         </div>
 
-        {/* Carousel — only when matches today exist */}
-        {hasMatches ? (
+        {/* Carousel — always shown, minimum 3 cards */}
+        {count > 0 && (
           <>
             <div
               ref={containerRef}
@@ -419,7 +422,7 @@ export default function WorldCupClient({
                 go(delta < 0 ? 1 : -1);
               }}
             >
-              {todayMatches.map((match, i) => {
+              {displayMatches.map((match, i) => {
                 const diff = (i - index + count) % count;
                 const isActive = diff === 0;
                 return (
@@ -469,7 +472,7 @@ export default function WorldCupClient({
             {/* Dot indicators */}
             {count > 1 && (
               <div className="flex items-center justify-center gap-2 pt-2">
-                {todayMatches.map((_, i) => (
+                {displayMatches.map((_, i) => (
                   <button
                     key={i}
                     onClick={() => setIndex(i)}
@@ -485,12 +488,7 @@ export default function WorldCupClient({
               </div>
             )}
           </>
-        ) : nextMatch ? (
-          /* Fallback — no matches today; px matches carousel PEEK_DESKTOP on desktop */
-          <div className="px-4 md:px-[160px] py-1">
-            <NextMatchCard match={nextMatch} now={now} />
-          </div>
-        ) : null}
+        )}
       </div>
 
       {/* ── Constrained sections ──────────────────────────────────────── */}
