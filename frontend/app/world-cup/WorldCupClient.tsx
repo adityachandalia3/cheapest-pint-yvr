@@ -5,6 +5,7 @@ import Link from 'next/link';
 import posthog from 'posthog-js';
 import type { WcMatch, SupportersBar, NeutralBarData } from './page';
 import { getTeamColors } from '@/lib/teamColors';
+import FeaturedVenuesCarousel from './FeaturedVenuesCarousel';
 
 const LOADING_EMOJIS = ['🇲🇽', '🇨🇦', '🇺🇸', '🇧🇷', '🇩🇪', '🏴󠁧󠁢󠁥󠁮󠁧󠁿', '🇦🇷'];
 
@@ -617,6 +618,9 @@ export default function WorldCupClient({
           </>
         )}
       </div>
+
+      {/* ── Featured Venues ──────────────────────────────────────────── */}
+      <FeaturedVenuesCarousel />
 
       {/* ── Constrained sections ──────────────────────────────────────── */}
       <div className="max-w-2xl md:max-w-3xl mx-auto pb-8">
