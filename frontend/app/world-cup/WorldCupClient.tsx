@@ -56,6 +56,60 @@ function getNeutralBarPrice(bar: NeutralBarData, now: Date): { price: number | n
   return { price: cheapest, isHH };
 }
 
+const PRIORITY_COUNTRIES = ['Canada', 'England', 'Germany', 'Australia', 'Portugal'];
+
+const LATAM_COUNTRIES = new Set([
+  'Argentina', 'Brazil', 'Mexico', 'Colombia', 'Uruguay', 'Chile',
+  'Ecuador', 'Peru', 'Bolivia', 'Venezuela', 'Paraguay',
+  'Costa Rica', 'Honduras', 'Panama', 'El Salvador', 'Guatemala',
+]);
+
+type WatchPill =
+  | { type: 'supporters'; flag: string; barName: string; mapsQuery: string }
+  | { type: 'neutral'; barName: string; mapsQuery: string }
+  | { type: 'fanpark' };
+
+function getWatchWithFansPill(match: WcMatch, supportersBars: SupportersBar[]): WatchPill {
+  // 1. Direct supporters bar match with priority
+  const homeEntry = supportersBars.find(sb => sb.country === match.team_home && (sb.bar || sb.venue_name));
+  const awayEntry = supportersBars.find(sb => sb.country === match.team_away && (sb.bar || sb.venue_name));
+
+  let chosen: SupportersBar | null = null;
+  if (homeEntry && awayEntry) {
+    const hi = PRIORITY_COUNTRIES.indexOf(homeEntry.country);
+    const ai = PRIORITY_COUNTRIES.indexOf(awayEntry.country);
+    if (hi !== -1 && (ai === -1 || hi < ai)) chosen = homeEntry;
+    else if (ai !== -1) chosen = awayEntry;
+    else chosen = homeEntry;
+  } else {
+    chosen = homeEntry ?? awayEntry ?? null;
+  }
+
+  if (chosen) {
+    const barName = chosen.bar?.name ?? chosen.venue_name ?? chosen.country;
+    const mapsQuery = chosen.bar ? `${chosen.bar.name} Vancouver BC` : `${barName} Vancouver BC`;
+    return { type: 'supporters', flag: chosen.flag, barName, mapsQuery };
+  }
+
+  // 2. Either team is Latin American → Latin festival
+  const isLatam = LATAM_COUNTRIES.has(match.team_home) || LATAM_COUNTRIES.has(match.team_away);
+  if (isLatam) {
+    const latinEntry = supportersBars.find(sb => sb.country === 'Latin America');
+    if (latinEntry) {
+      const latamFlag = LATAM_COUNTRIES.has(match.team_home) ? match.flag_home : match.flag_away;
+      return { type: 'supporters', flag: latamFlag, barName: 'Latincouver', mapsQuery: 'Latincouver Vancouver BC' };
+    }
+  }
+
+  // 3. Match-specific neutral bar
+  if (match.neutral_bar) {
+    return { type: 'neutral', barName: match.neutral_bar.name, mapsQuery: `${match.neutral_bar.name} Vancouver BC` };
+  }
+
+  // 4. Fallback: FIFA Fan Park
+  return { type: 'fanpark' };
+}
+
 function getStatusBadge(matchDate: string, kickoffTime: string, now: Date, isVan: boolean): string {
   const todayStr = now.toLocaleDateString('sv-SE', { timeZone: 'America/Vancouver' });
   const nextDay = new Date(now);
@@ -105,13 +159,14 @@ function SectionHeader({ children, right }: { children: React.ReactNode; right?:
   );
 }
 
-function MatchCardInner({ match, now }: { match: WcMatch; now: Date }) {
+function MatchCardInner({ match, now, supportersBars }: { match: WcMatch; now: Date; supportersBars: SupportersBar[] }) {
   const isVan = match.is_vancouver_match;
   const homeColors = getTeamColors(match.team_home);
   const awayColors = getTeamColors(match.team_away);
   const status = getStatusBadge(match.match_date, match.kickoff_time, now, isVan);
   const neutralPrice = match.neutral_bar ? getNeutralBarPrice(match.neutral_bar, now) : null;
   const hasBars = !!(match.supporters_bar || match.neutral_bar);
+  const watchPill = getWatchWithFansPill(match, supportersBars);
 
   return (
     <div
@@ -147,7 +202,7 @@ function MatchCardInner({ match, now }: { match: WcMatch; now: Date }) {
         {/* Status badge — top centre */}
         <div className="flex justify-center">
           <span style={{
-            fontSize: 9, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.09em',
+            fontSize: 8, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.09em',
             color: '#FFD966', background: 'rgba(255,255,255,0.08)',
             border: '1px solid rgba(255,217,102,0.35)',
             borderRadius: 100, padding: '3px 10px', whiteSpace: 'nowrap',
@@ -159,11 +214,11 @@ function MatchCardInner({ match, now }: { match: WcMatch; now: Date }) {
         {/* Teams */}
         <div className="flex items-center justify-between flex-1 min-h-0 px-1">
           <div className="flex flex-col items-center gap-1 w-[38%] text-center">
-            <span style={{ fontSize: 38, lineHeight: 1, filter: 'drop-shadow(0 3px 8px rgba(0,0,0,0.45))' }}>
+            <span style={{ fontSize: 32, lineHeight: 1, filter: 'drop-shadow(0 3px 8px rgba(0,0,0,0.45))' }}>
               {match.flag_home}
             </span>
             <span style={{
-              fontSize: 11, fontWeight: 900, color: '#FFFFFF',
+              fontSize: 9, fontWeight: 900, color: '#FFFFFF',
               textTransform: 'uppercase', letterSpacing: '0.05em', lineHeight: 1.2,
             }}>
               {match.team_home}
@@ -172,18 +227,18 @@ function MatchCardInner({ match, now }: { match: WcMatch; now: Date }) {
 
           <div style={{
             background: 'rgba(255,255,255,0.12)', borderRadius: 100,
-            padding: '4px 10px', fontSize: 11, fontWeight: 900,
+            padding: '4px 10px', fontSize: 9, fontWeight: 900,
             color: 'rgba(255,255,255,0.7)', flexShrink: 0,
           }}>
             VS
           </div>
 
           <div className="flex flex-col items-center gap-1 w-[38%] text-center">
-            <span style={{ fontSize: 38, lineHeight: 1, filter: 'drop-shadow(0 3px 8px rgba(0,0,0,0.45))' }}>
+            <span style={{ fontSize: 32, lineHeight: 1, filter: 'drop-shadow(0 3px 8px rgba(0,0,0,0.45))' }}>
               {match.flag_away}
             </span>
             <span style={{
-              fontSize: 11, fontWeight: 900, color: '#FFFFFF',
+              fontSize: 9, fontWeight: 900, color: '#FFFFFF',
               textTransform: 'uppercase', letterSpacing: '0.05em', lineHeight: 1.2,
             }}>
               {match.team_away}
@@ -192,13 +247,46 @@ function MatchCardInner({ match, now }: { match: WcMatch; now: Date }) {
         </div>
 
         {/* Kickoff line */}
-        <div className="text-center" style={{ fontSize: 11 }}>
+        <div className="text-center" style={{ fontSize: 9 }}>
           <span style={{ color: 'rgba(255,255,255,0.92)', fontWeight: 600 }}>
             {formatMatchDate(match.match_date)} · {formatKickoff(match.kickoff_time)}
           </span>
           {match.venue && (
             <span style={{ color: 'rgba(255,255,255,0.55)' }}> · {match.venue}</span>
           )}
+        </div>
+
+        {/* Watch with fans pill */}
+        <div className="flex justify-center overflow-hidden w-full">
+          <a
+            href={watchPill.type === 'fanpark'
+              ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('FIFA Fan Park Vancouver BC')}`
+              : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(watchPill.mapsQuery)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={e => e.stopPropagation()}
+            style={{
+              display: 'inline-block',
+              maxWidth: '100%',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              background: 'rgba(255,217,102,0.15)',
+              border: '1px solid rgba(255,217,102,0.4)',
+              color: '#FFD966',
+              borderRadius: 999,
+              padding: '4px 10px',
+              fontSize: 9,
+              fontWeight: 600,
+              textDecoration: 'none',
+            }}
+          >
+            {watchPill.type === 'supporters'
+              ? `🍺 Watch with fans ${watchPill.flag} ${watchPill.barName}`
+              : watchPill.type === 'neutral'
+              ? `📺 Showing this match · ${watchPill.barName}`
+              : `📺 FIFA Fan Park · Official Fan Zone`}
+          </a>
         </div>
 
         {/* Bar chips */}
@@ -212,7 +300,7 @@ function MatchCardInner({ match, now }: { match: WcMatch; now: Date }) {
                 onClick={e => e.stopPropagation()}
                 style={{
                   background: '#FFD966', color: '#14110c',
-                  fontSize: 10, fontWeight: 700,
+                  fontSize: 9, fontWeight: 700,
                   padding: '3px 9px', borderRadius: 100,
                   textDecoration: 'none', whiteSpace: 'nowrap',
                 }}
@@ -230,7 +318,7 @@ function MatchCardInner({ match, now }: { match: WcMatch; now: Date }) {
                   background: 'rgba(255,255,255,0.14)',
                   border: '1px solid rgba(255,255,255,0.25)',
                   color: 'rgba(255,255,255,0.92)',
-                  fontSize: 10, fontWeight: 700,
+                  fontSize: 9, fontWeight: 700,
                   padding: '3px 9px', borderRadius: 100,
                   textDecoration: 'none', whiteSpace: 'nowrap',
                 }}
@@ -246,8 +334,8 @@ function MatchCardInner({ match, now }: { match: WcMatch; now: Date }) {
 }
 
 // Carousel variant — fills the full card slot
-function MatchCard({ match, now }: { match: WcMatch; now: Date }) {
-  return <MatchCardInner match={match} now={now} />;
+function MatchCard({ match, now, supportersBars }: { match: WcMatch; now: Date; supportersBars: SupportersBar[] }) {
+  return <MatchCardInner match={match} now={now} supportersBars={supportersBars} />;
 }
 
 function CountryDetail({ sb }: { sb: SupportersBar }) {
@@ -447,7 +535,7 @@ export default function WorldCupClient({
           <>
             <div
               ref={containerRef}
-              className="relative w-full overflow-hidden h-[132px] md:h-[208px]"
+              className="relative w-full overflow-hidden h-[145px] md:h-[229px]"
               onTouchStart={e => { touchStartX.current = e.touches[0].clientX; hasSwiped.current = false; }}
               onTouchMove={e => {
                 if (touchStartX.current === null) return;
@@ -476,7 +564,7 @@ export default function WorldCupClient({
                       ...getCardStyle(diff),
                     }}
                   >
-                    <MatchCard match={match} now={now} />
+                    <MatchCard match={match} now={now} supportersBars={supportersBars} />
                   </div>
                 );
               })}
