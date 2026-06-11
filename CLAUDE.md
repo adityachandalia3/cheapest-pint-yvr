@@ -1,37 +1,58 @@
-# cheapest-pint-yvr
+# Brewscanner (cheapest-pint-yvr)
 
-A web app that helps people find the cheapest pint of beer in Vancouver, BC.
-
-## What this project does
-
-Aggregates pint prices from bars and pubs across Vancouver so users can quickly find the best deal near them.
+Find the cheapest pint in Vancouver. Real-time prices, happy hour windows, pub crawl builder, Find Your Vibe chat, World Cup mode.
 
 ## Stack
 
-- **Frontend**: Next.js (to be built in `/app` or `/frontend`)
-- **Scraper**: Python (`/scraper/scraper.py`) — discovers bars via Google Places API, extracts pint prices from menus using the Claude API, writes everything to Supabase
-- **Database**: Supabase (Postgres) — two main tables: `bars` and `pint_prices`
+- **Frontend**: Next.js 14 App Router — `/frontend`
+- **Scraper**: Python — `/scraper/scraper.py` (Google Places + Claude API → Supabase)
+- **Database**: Supabase (Postgres)
+- **Hosting**: Vercel (main branch = production, feature branches = preview deployments)
 
-## Data pipeline
+## Key rules — read before doing anything
 
-1. `scraper.py` calls the Google Places API to find all bars/pubs in Vancouver BC
-2. For each bar, it fetches name, address, lat/lng, phone, website, and opening hours
-3. Bar records are upserted into the `bars` table (deduped by `google_place_id`)
-4. Menu URLs / text are passed to the Claude API to parse and extract pint prices
-5. Extracted prices are written to `pint_prices`, linked to the bar by `bar_id`
+- **NEVER push to `main` (production) without explicit user approval**
+- **NEVER write to the database without explicit user approval**
+- Active feature branch: `feature/world-cup` — do NOT merge to main until user says so
+- Dev server: `cd frontend && npx next dev` (port 3000) or `-p 3001`
+- Env vars are in `frontend/.env.local` — `SUPABASE_URL` and `SUPABASE_SERVICE_KEY`
 
-## Environment variables
+## Branches
 
-See `.env.example` for required keys. Copy it to `.env` and fill in real values before running anything.
+- `main` — production at getbrewscanner.com
+- `feature/world-cup` — World Cup 2026 mode, staging on Vercel preview
 
-## Database schema
+## Database tables (key ones)
 
-See `supabase_schema.sql` — run this in the Supabase SQL editor to set up the tables.
+- `bars` — bar metadata, vibe profiles, neighbourhood
+- `pint_prices` — price per bar, with happy_hour_price_cad
+- `happy_hour_windows` — days[], start_time, end_time per bar
+- `supporters_bars` — country, flag, bar_id or venue_name, notes
+- `wc_matches` — match_date, kickoff_time, team_home, team_away, flag_home, flag_away, supporters_bar_id, neutral_bar_id, is_vancouver_match
 
-## Running the scraper
+## Pages
 
-```bash
-cd scraper
-pip install -r requirements.txt
-python scraper.py
-```
+- `/` — main bar list with price map
+- `/bar-map` — map view
+- `/find-your-vibe` — chat-based bar recommender
+- `/crawl-builder` — pub crawl builder
+- `/world-cup` — World Cup 2026 mode (feature/world-cup branch only)
+- `/install` — add to home screen
+
+## World Cup page (`/world-cup`)
+
+- Server component (`page.tsx`) fetches today's matches + next match + supporters bars
+- FK disambiguation: `bars!supporters_bar_id(...)` and `bars!neutral_bar_id(...)` — use column name, NOT constraint name
+- Client component (`WorldCupClient.tsx`): carousel of match cards, country pills, CTA
+- Cards: blue gradient (`linear-gradient(135deg, #1e3a8a, #1d4ed8, #312e81)`), Vancouver matches use amber gradient
+- Carousel: full viewport width, `PEEK_MOBILE=28`, `PEEK_DESKTOP=160`, `h-[190px] md:h-[240px]`
+
+## Vibe profiler
+
+- `scraper/vibe_profiler.py` — uses Claude (Haiku for cost) to generate vibe tags from Google reviews
+- Tags include: `food_destination` (added recently), `sports_bar`, `rooftop`, etc.
+- Run with `--bar-id <id>` for single bar, `--has-reviews` to filter to bars with reviews
+
+## Vercel env vars
+
+Both `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` must be set for **Production and Preview** (no branch filter). If preview deployments break, check this first.

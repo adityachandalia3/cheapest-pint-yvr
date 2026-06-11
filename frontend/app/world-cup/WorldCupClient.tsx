@@ -108,7 +108,7 @@ function BarRow({
 }) {
   const inner = (
     <div className="flex items-center justify-between gap-2 py-2 px-1">
-      <span className="text-xs font-semibold text-[#1c1410] truncate">{name}</span>
+      <span className="text-xs font-semibold text-white/90 truncate">{name}</span>
       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 ${badgeStyle}`}>
         {badge}
       </span>
@@ -121,7 +121,7 @@ function BarRow({
         href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name + ' Vancouver BC')}`}
         target="_blank"
         rel="noopener noreferrer"
-        className="block hover:bg-[#fef9f0] rounded-lg transition-colors -mx-1 px-1"
+        className="block hover:bg-white/10 rounded-lg transition-colors -mx-1 px-1"
       >
         {inner}
       </a>
@@ -140,59 +140,61 @@ function MatchCard({ match, now }: { match: WcMatch; now: Date }) {
 
   const hasBars = match.supporters_bar || match.neutral_bar;
 
+  const bgStyle: React.CSSProperties = {
+    background: isVan
+      ? 'linear-gradient(135deg, #92400e, #b45309, #78350f)'
+      : 'linear-gradient(135deg, #1e3a8a, #1d4ed8, #312e81)',
+  };
+
   return (
-    <div
-      className={`w-full h-full rounded-2xl bg-[#fffbeb] flex flex-col overflow-hidden ${
-        isVan ? 'border-[1.5px] border-[#B34207]' : 'border border-[#e8dcc8]'
-      }`}
-    >
+    <div className="w-full h-full rounded-2xl flex flex-col overflow-hidden shadow-lg" style={bgStyle}>
       {/* Header row */}
-      <div className="flex items-start justify-between px-4 pt-3 pb-2 border-b border-[#e8dcc8]">
+      <div className="flex items-start justify-between px-4 pt-3 pb-2">
         <div className="min-w-0">
           {match.group_label && (
-            <p className="text-[10px] font-black uppercase tracking-widest text-[#a0855a]">{match.group_label}</p>
+            <p className="text-[11px] font-black uppercase tracking-widest text-yellow-400">{match.group_label}</p>
           )}
           {match.venue && (
-            <p className="text-[10px] text-[#a0855a] leading-tight mt-0.5 truncate max-w-[180px]">{match.venue}</p>
+            <p className="text-[10px] text-white/50 leading-tight mt-0.5 truncate max-w-[180px]">{match.venue}</p>
           )}
         </div>
         <div className="flex items-center gap-1.5 shrink-0 ml-2">
           {isVan && (
-            <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-[#B34207] text-white">
-              Home match
+            <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-white/20 text-white">
+              🏟 Home match
             </span>
           )}
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#FAEEDA] text-[#B34207]">
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/20 text-white">
             {formatKickoff(match.kickoff_time)}
           </span>
         </div>
       </div>
 
       {/* Teams row */}
-      <div className="flex items-center justify-between px-4 py-3">
-        <div className="flex flex-col items-center gap-1 w-[38%]">
-          <span className="text-3xl leading-none">{match.flag_home}</span>
-          <span className="text-xs font-black text-[#1c1410] text-center leading-tight">{match.team_home}</span>
+      <div className="flex items-center justify-between px-6 py-2 flex-1">
+        <div className="flex flex-col items-center gap-2 w-[38%]">
+          <span className="text-6xl md:text-7xl leading-none drop-shadow-lg">{match.flag_home}</span>
+          <span className="text-sm md:text-xl font-black text-white text-center leading-tight uppercase tracking-wide">{match.team_home}</span>
         </div>
-        <div className="flex flex-col items-center gap-1">
-          <span className="text-xs font-black text-[#a0855a]">vs</span>
-          <span className="text-[10px] font-semibold text-[#a0855a] whitespace-nowrap">{countdown}</span>
+        <div className="flex flex-col items-center gap-2">
+          <span className="text-base md:text-2xl font-black text-white/30">vs</span>
+          <span className="text-[10px] md:text-xs font-bold text-white/70 whitespace-nowrap bg-white/10 px-2 py-0.5 rounded-full">{countdown}</span>
         </div>
-        <div className="flex flex-col items-center gap-1 w-[38%]">
-          <span className="text-3xl leading-none">{match.flag_away}</span>
-          <span className="text-xs font-black text-[#1c1410] text-center leading-tight">{match.team_away}</span>
+        <div className="flex flex-col items-center gap-2 w-[38%]">
+          <span className="text-6xl md:text-7xl leading-none drop-shadow-lg">{match.flag_away}</span>
+          <span className="text-sm md:text-xl font-black text-white text-center leading-tight uppercase tracking-wide">{match.team_away}</span>
         </div>
       </div>
 
       {/* Where fans are watching */}
       {hasBars && (
-        <div className="px-4 pb-3 mt-auto border-t border-[#e8dcc8]">
-          <p className="text-[9px] font-black uppercase tracking-widest text-[#a0855a] mt-2 mb-1">Where fans are watching</p>
+        <div className="px-4 pb-3 pt-2 mt-auto border-t border-white/10">
+          <p className="text-[9px] font-black uppercase tracking-widest text-white/40 mb-1">Where fans are watching</p>
           {match.supporters_bar && (
             <BarRow
               name={match.supporters_bar.name}
               badge={match.supporters_bar_label ?? '⚽ Supporters bar'}
-              badgeStyle="bg-[#FAECE7] text-[#993C1D]"
+              badgeStyle="bg-white/20 text-white"
               barId={match.supporters_bar.id}
             />
           )}
@@ -206,7 +208,7 @@ function MatchCard({ match, now }: { match: WcMatch; now: Date }) {
                     : `$${neutralPrice.price.toFixed(2)} pint`
                   : 'Cheap pints'
               }
-              badgeStyle="bg-[#E1F5EE] text-[#085041]"
+              badgeStyle="bg-emerald-400/20 text-emerald-300"
               barId={match.neutral_bar.id}
             />
           )}
@@ -218,22 +220,22 @@ function MatchCard({ match, now }: { match: WcMatch; now: Date }) {
 
 function NextMatchCard({ match }: { match: WcMatch }) {
   return (
-    <div className="w-full h-full rounded-2xl bg-[#fffbeb] border border-[#e8dcc8] flex flex-col items-center justify-center px-6 text-center gap-3">
-      <p className="text-[10px] font-black uppercase tracking-widest text-[#a0855a]">No matches today — next up</p>
-      <div className="flex items-center gap-3">
-        <div className="flex flex-col items-center gap-1">
-          <span className="text-3xl">{match.flag_home}</span>
-          <span className="text-xs font-black text-[#1c1410]">{match.team_home}</span>
+    <div className="w-full h-full rounded-2xl flex flex-col items-center justify-center px-6 text-center gap-3 shadow-lg" style={{ background: 'linear-gradient(135deg, #1e3a8a, #1d4ed8, #312e81)' }}>
+      <p className="text-[10px] font-black uppercase tracking-widest text-yellow-400">No matches today — next up</p>
+      <div className="flex items-center gap-6 md:gap-12">
+        <div className="flex flex-col items-center gap-2">
+          <span className="text-6xl md:text-9xl drop-shadow-lg">{match.flag_home}</span>
+          <span className="text-xs md:text-xl font-black text-white uppercase tracking-wide">{match.team_home}</span>
         </div>
-        <span className="text-sm font-black text-[#a0855a]">vs</span>
-        <div className="flex flex-col items-center gap-1">
-          <span className="text-3xl">{match.flag_away}</span>
-          <span className="text-xs font-black text-[#1c1410]">{match.team_away}</span>
+        <span className="text-base md:text-2xl font-black text-white/30">vs</span>
+        <div className="flex flex-col items-center gap-2">
+          <span className="text-6xl md:text-9xl drop-shadow-lg">{match.flag_away}</span>
+          <span className="text-xs md:text-xl font-black text-white uppercase tracking-wide">{match.team_away}</span>
         </div>
       </div>
-      <div className="text-xs text-[#a0855a] font-semibold">
+      <div className="text-xs text-white/60 font-semibold">
         {formatMatchDate(match.match_date)} · {formatKickoff(match.kickoff_time)}
-        {match.venue && <><br />{match.venue}</>}
+        {match.venue && <><br /><span className="text-white/40">{match.venue}</span></>}
       </div>
     </div>
   );
@@ -339,154 +341,169 @@ export default function WorldCupClient({
 
   return (
     <main className="min-h-screen bg-[#faf5eb] pb-24 md:pb-8">
-      <div className="max-w-2xl mx-auto">
 
-        {/* ── Today's Matches ──────────────────────────────────────────── */}
-        <div className="pt-5 pb-2">
-          <SectionHeader
-            right={
-              hasMatches
-                ? `${todayStr} · ${todayMatches.length} match${todayMatches.length !== 1 ? 'es' : ''}`
-                : todayStr
-            }
-          >
+      {/* ── Today's Matches — full-width carousel ────────────────────── */}
+      <div className="pt-3 pb-2">
+
+        {/* Label — sits flush above carousel */}
+        <div className="flex items-center gap-2 px-4 pb-2">
+          <span className="relative flex h-2 w-2 shrink-0">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+          </span>
+          <span className="text-[10px] font-black uppercase tracking-widest text-stone-500">
             {hasMatches ? "Today's Matches" : 'Match Schedule'}
-          </SectionHeader>
-
-          {/* Carousel stage */}
-          <div
-            ref={containerRef}
-            className="relative w-full overflow-hidden h-[210px] md:h-[460px]"
-            onTouchStart={e => { touchStartX.current = e.touches[0].clientX; hasSwiped.current = false; }}
-            onTouchMove={e => {
-              if (touchStartX.current === null) return;
-              if (Math.abs(e.touches[0].clientX - touchStartX.current) > 10) hasSwiped.current = true;
-            }}
-            onTouchEnd={e => {
-              if (touchStartX.current === null) return;
-              const delta = e.changedTouches[0].clientX - touchStartX.current;
-              touchStartX.current = null;
-              if (!hasSwiped.current || Math.abs(delta) < 40) return;
-              go(delta < 0 ? 1 : -1);
-            }}
-          >
-            {matches.map((match, i) => {
-              const diff = (i - index + count) % count;
-              const isActive = diff === 0;
-              return (
-                <div
-                  key={match.id}
-                  onClick={() => { if (!isActive) setIndex(i); }}
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: '50%',
-                    width: cardWidth,
-                    height: '100%',
-                    marginLeft: -cardWidth / 2,
-                    transition: 'transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.3s ease',
-                    cursor: isActive ? 'default' : 'pointer',
-                    ...getCardStyle(diff),
-                  }}
-                >
-                  {hasMatches
-                    ? <MatchCard match={match} now={now} />
-                    : nextMatch && <NextMatchCard match={nextMatch} />
-                  }
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Arrow buttons — desktop only */}
-          {count > 1 && (
-            <>
-              <button
-                onClick={() => go(-1)}
-                className="hidden md:flex absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 items-center justify-center rounded-full bg-white border border-[#e8dcc8] shadow-sm hover:border-[#B34207]/40 transition-colors z-20"
-                aria-label="Previous match"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M15 18l-6-6 6-6" />
-                </svg>
-              </button>
-              <button
-                onClick={() => go(1)}
-                className="hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 items-center justify-center rounded-full bg-white border border-[#e8dcc8] shadow-sm hover:border-[#B34207]/40 transition-colors z-20"
-                aria-label="Next match"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M9 18l6-6-6-6" />
-                </svg>
-              </button>
-            </>
-          )}
-
-          {/* Dot indicators */}
-          {count > 1 && (
-            <div className="flex items-center justify-center gap-2 pt-3">
-              {matches.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setIndex(i)}
-                  className="transition-all duration-300 rounded-full"
-                  style={{
-                    width: i === index ? 20 : 7,
-                    height: 7,
-                    background: i === index ? '#B34207' : '#1c191722',
-                  }}
-                  aria-label={`Match ${i + 1}`}
-                />
-              ))}
-            </div>
-          )}
+          </span>
+          <span className="text-[10px] text-[#a0855a] font-semibold">
+            {hasMatches
+              ? `${todayStr} · ${todayMatches.length} match${todayMatches.length !== 1 ? 'es' : ''}`
+              : todayStr}
+          </span>
         </div>
 
-        {/* ── Find Your Country's Bar ───────────────────────────────────── */}
+        {/* Carousel stage — no max-w, full viewport width */}
+        <div
+          ref={containerRef}
+          className="relative w-full overflow-hidden h-[190px] md:h-[240px]"
+          onTouchStart={e => { touchStartX.current = e.touches[0].clientX; hasSwiped.current = false; }}
+          onTouchMove={e => {
+            if (touchStartX.current === null) return;
+            if (Math.abs(e.touches[0].clientX - touchStartX.current) > 10) hasSwiped.current = true;
+          }}
+          onTouchEnd={e => {
+            if (touchStartX.current === null) return;
+            const delta = e.changedTouches[0].clientX - touchStartX.current;
+            touchStartX.current = null;
+            if (!hasSwiped.current || Math.abs(delta) < 40) return;
+            go(delta < 0 ? 1 : -1);
+          }}
+        >
+          {matches.map((match, i) => {
+            const diff = (i - index + count) % count;
+            const isActive = diff === 0;
+            return (
+              <div
+                key={match.id}
+                onClick={() => { if (!isActive) setIndex(i); }}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: '50%',
+                  width: cardWidth,
+                  height: '100%',
+                  marginLeft: -cardWidth / 2,
+                  transition: 'transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.3s ease',
+                  cursor: isActive ? 'default' : 'pointer',
+                  ...getCardStyle(diff),
+                }}
+              >
+                {hasMatches
+                  ? <MatchCard match={match} now={now} />
+                  : nextMatch && <NextMatchCard match={nextMatch} />
+                }
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Arrow buttons — desktop only */}
+        {count > 1 && (
+          <div className="relative">
+            <button
+              onClick={() => go(-1)}
+              className="hidden md:flex absolute left-4 -top-[230px] w-10 h-10 items-center justify-center rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/20 transition-colors z-20"
+              aria-label="Previous match"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+            </button>
+            <button
+              onClick={() => go(1)}
+              className="hidden md:flex absolute right-4 -top-[230px] w-10 h-10 items-center justify-center rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/20 transition-colors z-20"
+              aria-label="Next match"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 18l6-6-6-6" />
+              </svg>
+            </button>
+          </div>
+        )}
+
+        {/* Dot indicators */}
+        {count > 1 && (
+          <div className="flex items-center justify-center gap-2 pt-3">
+            {matches.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setIndex(i)}
+                className="transition-all duration-300 rounded-full"
+                style={{
+                  width: i === index ? 20 : 7,
+                  height: 7,
+                  background: i === index ? '#B34207' : '#1c191722',
+                }}
+                aria-label={`Match ${i + 1}`}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── Below sections — constrained width ───────────────────────── */}
+      <div className="max-w-2xl mx-auto">
+
+        {/* ── Find Your Country's Bar ─────────────────────────────────── */}
         {supportersBars.length > 0 && (
-          <div className="px-4 pt-5 pb-2">
+          <div className="px-4 pt-3 pb-2">
             <SectionHeader>Find Your Country&apos;s Bar</SectionHeader>
-            <div className="flex flex-wrap gap-2">
+
+            {/* Pills — compact, natural wrap */}
+            <div className="flex flex-wrap gap-1.5">
               {visibleCountries.map(sb => (
-                <div key={sb.id} className="w-full">
-                  <button
-                    onClick={() => {
-                      posthog.capture('wc_supporters_bar_tapped', { country: sb.country });
-                      setExpandedCountryId(id => id === sb.id ? null : sb.id);
-                    }}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-sm font-semibold transition-all ${
-                      expandedCountryId === sb.id
-                        ? 'bg-[#B34207] text-white border-[#B34207]'
-                        : 'bg-white border-[#e8dcc8] text-[#1c1410] hover:border-[#B34207]/40'
-                    }`}
+                <button
+                  key={sb.id}
+                  onClick={() => {
+                    posthog.capture('wc_supporters_bar_tapped', { country: sb.country });
+                    setExpandedCountryId(id => id === sb.id ? null : sb.id);
+                  }}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full border text-xs font-semibold transition-all ${
+                    expandedCountryId === sb.id
+                      ? 'bg-[#B34207] text-white border-[#B34207]'
+                      : 'bg-white border-[#e8dcc8] text-[#1c1910] hover:border-[#B34207]/40'
+                  }`}
+                >
+                  <span>{sb.flag}</span>
+                  <span>{sb.country}</span>
+                  <svg
+                    width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                    className={`transition-transform duration-200 ${expandedCountryId === sb.id ? 'rotate-180' : ''}`}
                   >
-                    <span>{sb.flag}</span>
-                    <span>{sb.bar?.name ?? sb.venue_name ?? sb.country}</span>
-                    <svg
-                      width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                      strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-                      className={`transition-transform duration-200 ${expandedCountryId === sb.id ? 'rotate-180' : ''}`}
-                    >
-                      <path d="M6 9l6 6 6-6" />
-                    </svg>
-                  </button>
-                  {expandedCountryId === sb.id && <CountryDetail sb={sb} />}
-                </div>
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                </button>
               ))}
 
               {!showAllCountries && supportersBars.length > COUNTRIES_VISIBLE && (
                 <button
                   onClick={() => setShowAllCountries(true)}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-dashed border-[#e8dcc8] text-sm font-semibold text-[#a0855a] hover:border-[#B34207]/40 transition-colors"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-dashed border-[#e8dcc8] text-xs font-semibold text-[#a0855a] hover:border-[#B34207]/40 transition-colors"
                 >
-                  All countries →
+                  +{supportersBars.length - COUNTRIES_VISIBLE} more →
                 </button>
               )}
             </div>
+
+            {/* Expanded detail — appears below the entire pill row */}
+            {expandedCountryId && (() => {
+              const sb = supportersBars.find(s => s.id === expandedCountryId);
+              return sb ? <CountryDetail sb={sb} /> : null;
+            })()}
           </div>
         )}
 
-        {/* ── Cheapest pint near a screening ───────────────────────────── */}
+        {/* ── Cheapest pint near a screening ──────────────────────────── */}
         <div className="px-4 pt-4 pb-2">
           <Link
             href="/"
