@@ -15,14 +15,14 @@ type FeaturedVenue = {
 
 const FEATURED_VENUES: FeaturedVenue[] = [
   {
-    id: 'blarney-stone',
-    badge: '🤝 Partner',
-    name: 'The Blarney Stone',
-    description: "Gastown's home of the Southsiders 🇮🇪",
-    cta: 'View Bar →',
-    ctaHref: 'https://www.google.com/maps/search/?api=1&query=The+Blarney+Stone+Vancouver+BC',
-    image: '/wc-featured/blarney-stone.jpg',
-    placeholderColor: '#1a3a1a',
+    id: 'canada-soccer-house',
+    badge: '🍁 Official Canada House',
+    name: 'Canada Soccer House',
+    description: 'Free · The Shipyards, North Vancouver',
+    cta: 'More Info →',
+    ctaHref: 'https://news.canadasoccer.com/canada-soccer-announces-uber-eats-canada-soccer-house-north-vancouver-for-the-2026-fifa-world-cup',
+    image: '',
+    placeholderColor: '#7b0000',
   },
   {
     id: 'latincouver',
@@ -33,6 +33,16 @@ const FEATURED_VENUES: FeaturedVenue[] = [
     ctaHref: 'https://www.google.com/maps/search/?api=1&query=Latin+Plaza+Hub+68+Water+Street+Vancouver+BC',
     image: '/wc-featured/latincouver.jpg',
     placeholderColor: '#6b1515',
+  },
+  {
+    id: 'alliance-francaise',
+    badge: '🇫🇷 Les Bleus HQ',
+    name: 'Alliance Française',
+    description: 'Official France watch parties — Vancouver',
+    cta: 'Get Directions →',
+    ctaHref: 'https://www.google.com/maps/search/?api=1&query=Alliance+Francaise+Vancouver+BC',
+    image: '',
+    placeholderColor: '#00209F',
   },
   {
     id: 'fifa-fan-festival',
@@ -99,7 +109,7 @@ export default function FeaturedVenuesCarousel() {
             className="text-[10px] font-black uppercase tracking-widest"
             style={{ color: 'rgba(255,255,255,0.92)' }}
           >
-            Featured Venues
+            Featured Screenings
           </span>
         </div>
         <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>Swipe to explore →</span>
@@ -193,7 +203,9 @@ function VenueCard({ venue }: { venue: FeaturedVenue }) {
         borderRadius: 14, overflow: 'hidden',
         position: 'relative',
         backgroundColor: venue.placeholderColor,
-        backgroundImage: `linear-gradient(to top, rgba(20,17,12,0.9) 0%, rgba(20,17,12,0.55) 40%, rgba(20,17,12,0.1) 100%), url(${venue.image})`,
+        backgroundImage: venue.image
+          ? `linear-gradient(to top, rgba(20,17,12,0.9) 0%, rgba(20,17,12,0.55) 40%, rgba(20,17,12,0.1) 100%), url(${venue.image})`
+          : `linear-gradient(to top, rgba(20,17,12,0.85) 0%, rgba(20,17,12,0.4) 60%, transparent 100%)`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       }}
