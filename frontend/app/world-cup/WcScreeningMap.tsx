@@ -9,6 +9,7 @@ type SupporterInfo = { country: string; flag: string };
 type Props = {
   screeningBars: WcScreeningBar[];
   supportersBarMap: Record<string, SupporterInfo>;
+  className?: string;
 };
 
 const VANCOUVER_CENTER = { lat: 49.2827, lng: -123.1207 };
@@ -35,7 +36,7 @@ function pinSvg(fill: string, w: number, h: number): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 36" width="${w}" height="${h}"><path d="M12 0C5.37 0 0 5.37 0 12c0 7.5 12 24 12 24S24 19.5 24 12C24 5.37 18.63 0 12 0z" fill="${fill}" stroke="white" stroke-width="1.5"/><circle cx="12" cy="12" r="5" fill="rgba(255,255,255,0.35)"/></svg>`;
 }
 
-export default function WcScreeningMap({ screeningBars, supportersBarMap }: Props) {
+export default function WcScreeningMap({ screeningBars, supportersBarMap, className }: Props) {
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '',
@@ -85,8 +86,8 @@ export default function WcScreeningMap({ screeningBars, supportersBarMap }: Prop
   if (!isLoaded) {
     return (
       <div
-        className="h-[380px] md:h-[480px] flex items-center justify-center"
-        style={{ background: '#0E1B3D' }}
+        className={className ?? 'h-[380px] md:h-[480px] flex items-center justify-center'}
+        style={{ background: '#0E1B3D', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
       >
         <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 13 }}>Loading map…</p>
       </div>
@@ -94,7 +95,7 @@ export default function WcScreeningMap({ screeningBars, supportersBarMap }: Prop
   }
 
   return (
-    <div className="relative h-[380px] md:h-[480px]">
+    <div className={className ?? 'relative h-[380px] md:h-[480px]'}>
       <button
         onClick={handleNearMe}
         disabled={nearMeLoading}

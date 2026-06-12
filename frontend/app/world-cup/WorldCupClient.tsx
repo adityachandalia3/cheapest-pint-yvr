@@ -634,72 +634,9 @@ export default function WorldCupClient({
         )}
       </div>
 
-      {/* ── Desktop: Featured Venues (left) + Supporters Bars (right) ── */}
-      {/* ── Mobile: stacked as before ──────────────────────────────────── */}
-      <div className="md:flex md:items-start md:pt-2">
-
-        {/* Left half: Featured Venues Carousel */}
-        <div className="md:w-1/2 md:min-w-0">
-          <FeaturedVenuesCarousel />
-        </div>
-
-        {/* Right half: Find Your Country's Bar */}
-        {filteredSupportersBars.length > 0 && (
-          <div className="md:w-1/2 md:shrink-0 px-4 md:px-4 pt-4 md:pt-3 pb-2 md:border-l md:border-white/20">
-            <SectionHeader>Find Your Country&apos;s Bar</SectionHeader>
-
-            <div className="flex flex-wrap gap-1.5">
-              {visibleCountries.map(sb => (
-                <button
-                  key={sb.id}
-                  onClick={() => {
-                    posthog.capture('wc_supporters_bar_tapped', { country: sb.country });
-                    setExpandedCountryId(id => id === sb.id ? null : sb.id);
-                  }}
-                  className="inline-flex items-center gap-1 text-xs font-semibold transition-all"
-                  style={{
-                    padding: '6px 10px', borderRadius: 100,
-                    background: expandedCountryId === sb.id ? '#B34207' : 'rgba(255,255,255,0.10)',
-                    border: expandedCountryId === sb.id
-                      ? '1px solid #B34207'
-                      : '1px solid rgba(255,255,255,0.22)',
-                    color: '#FFFFFF',
-                  }}
-                >
-                  <span>{sb.flag}</span>
-                  <span>{sb.country}</span>
-                  <svg
-                    width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-                    className={`transition-transform duration-200 ${expandedCountryId === sb.id ? 'rotate-180' : ''}`}
-                  >
-                    <path d="M6 9l6 6 6-6" />
-                  </svg>
-                </button>
-              ))}
-
-              {!showAllCountries && filteredSupportersBars.length > COUNTRIES_VISIBLE && (
-                <button
-                  onClick={() => setShowAllCountries(true)}
-                  className="inline-flex items-center gap-1 text-xs font-semibold"
-                  style={{
-                    padding: '6px 10px', borderRadius: 100,
-                    background: 'transparent',
-                    border: '1px dashed #FFD966',
-                    color: '#FFD966',
-                  }}
-                >
-                  +{filteredSupportersBars.length - COUNTRIES_VISIBLE} more →
-                </button>
-              )}
-            </div>
-
-            {expandedCountryId && (() => {
-              const sb = filteredSupportersBars.find(s => s.id === expandedCountryId);
-              return sb ? <CountryDetail sb={sb} /> : null;
-            })()}
-          </div>
-        )}
+      {/* ── Featured Venues Carousel ────────────────────────────────── */}
+      <div className="pt-2">
+        <FeaturedVenuesCarousel />
       </div>
 
       {/* ── WHERE TO WATCH map ───────────────────────────────────────── */}
@@ -723,6 +660,64 @@ export default function WorldCupClient({
         </div>
         <WcScreeningMap screeningBars={screeningBars} supportersBarMap={supportersBarMap} />
       </div>
+
+      {/* ── Find Your Country's Bar ──────────────────────────────────── */}
+      {filteredSupportersBars.length > 0 && (
+        <div className="px-4 pt-4 pb-2">
+          <SectionHeader>Find Your Country&apos;s Bar</SectionHeader>
+
+          <div className="flex flex-wrap gap-1.5">
+            {visibleCountries.map(sb => (
+              <button
+                key={sb.id}
+                onClick={() => {
+                  posthog.capture('wc_supporters_bar_tapped', { country: sb.country });
+                  setExpandedCountryId(id => id === sb.id ? null : sb.id);
+                }}
+                className="inline-flex items-center gap-1 text-xs font-semibold transition-all"
+                style={{
+                  padding: '6px 10px', borderRadius: 100,
+                  background: expandedCountryId === sb.id ? '#B34207' : 'rgba(255,255,255,0.10)',
+                  border: expandedCountryId === sb.id
+                    ? '1px solid #B34207'
+                    : '1px solid rgba(255,255,255,0.22)',
+                  color: '#FFFFFF',
+                }}
+              >
+                <span>{sb.flag}</span>
+                <span>{sb.country}</span>
+                <svg
+                  width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                  className={`transition-transform duration-200 ${expandedCountryId === sb.id ? 'rotate-180' : ''}`}
+                >
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
+              </button>
+            ))}
+
+            {!showAllCountries && filteredSupportersBars.length > COUNTRIES_VISIBLE && (
+              <button
+                onClick={() => setShowAllCountries(true)}
+                className="inline-flex items-center gap-1 text-xs font-semibold"
+                style={{
+                  padding: '6px 10px', borderRadius: 100,
+                  background: 'transparent',
+                  border: '1px dashed #FFD966',
+                  color: '#FFD966',
+                }}
+              >
+                +{filteredSupportersBars.length - COUNTRIES_VISIBLE} more →
+              </button>
+            )}
+          </div>
+
+          {expandedCountryId && (() => {
+            const sb = filteredSupportersBars.find(s => s.id === expandedCountryId);
+            return sb ? <CountryDetail sb={sb} /> : null;
+          })()}
+        </div>
+      )}
 
       {/* ── Cheapest pint CTA — mobile: inline card, desktop: fixed bottom bar ── */}
       <div className="md:hidden max-w-2xl mx-auto pb-8">

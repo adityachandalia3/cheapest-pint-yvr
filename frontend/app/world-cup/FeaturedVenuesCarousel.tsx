@@ -108,7 +108,7 @@ export default function FeaturedVenuesCarousel() {
       {/* Carousel */}
       <div
         ref={containerRef}
-        className="relative w-full overflow-hidden h-[180px] md:h-[270px]"
+        className="relative w-full overflow-hidden h-[180px]"
         onTouchStart={e => { touchStartX.current = e.touches[0].clientX; hasSwiped.current = false; }}
         onTouchMove={e => {
           if (touchStartX.current === null) return;
