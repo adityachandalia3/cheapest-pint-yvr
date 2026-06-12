@@ -5,3 +5,10 @@ __pycache__/
 *.pyo
 .DS_Store
 .claude/
+
+# Sensitive credentials
+vercel-recovery-codes.txt
+
+# PWA generated files
+frontend/public/sw.js
+frontend/public/workbox-*.js
