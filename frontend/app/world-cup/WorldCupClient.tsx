@@ -4,7 +4,8 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import posthog from 'posthog-js';
-import type { WcMatch, SupportersBar, NeutralBarData, WcScreeningBar } from './page';
+import type { WcMatch, SupportersBar, NeutralBarData, WcScreeningBar, WcVenueBar } from './page';
+import WcVenueList, { WcVenueSheet, SelectedVenue, cheapestPrice, isHHActive } from './WcVenueList';
 import { getTeamColors } from '@/lib/teamColors';
 import FeaturedVenuesCarousel from './FeaturedVenuesCarousel';
 
@@ -376,6 +377,90 @@ function CountryDetail({ sb }: { sb: SupportersBar }) {
   );
 }
 
+function SupportersBarSheet({
+  sbs,
+  onClose,
+  onMoreInfo,
+  screeningVenueIds,
+}: {
+  sbs: SupportersBar[];
+  onClose: () => void;
+  onMoreInfo?: (sb: SupportersBar) => void;
+  screeningVenueIds: Set<string>;
+}) {
+  const { flag, country } = sbs[0];
+
+  return (
+    <>
+      <style>{`@keyframes sbSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }`}</style>
+      <div className="fixed inset-0 z-[500] bg-black/50" onClick={onClose} />
+      <div
+        className="fixed left-0 right-0 bottom-0 z-[501] max-h-[80vh] flex flex-col rounded-t-2xl shadow-2xl"
+        style={{ background: '#fffbeb', animation: 'sbSlideUp 0.25s ease-out' }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="w-10 h-1 bg-stone-300 rounded-full mx-auto mt-3 mb-1 shrink-0" />
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 pt-2 pb-3 border-b border-[#e8dcc8] shrink-0">
+          <div className="flex items-center gap-2">
+            <span style={{ fontSize: 28, lineHeight: 1 }}>{flag}</span>
+            <p className="font-black text-[#1c1917]" style={{ fontSize: 18 }}>{country}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-full text-stone-400 hover:text-[#1c1917] hover:bg-stone-100 transition-all text-sm"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Bar cards */}
+        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 16px)' }}>
+          {sbs.map(sb => {
+            const name = sb.bar?.name ?? sb.venue_name ?? sb.country;
+            const hood = sb.bar?.neighbourhood ?? sb.neighbourhood;
+            const mapsQuery = sb.bar ? `${sb.bar.name} Vancouver BC` : `${sb.venue_name ?? sb.country} Vancouver BC`;
+            const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapsQuery)}`;
+            const hasVenue = screeningVenueIds.has(sb.bar_id ?? '');
+
+            return (
+              <div key={sb.id} className="bg-white rounded-xl p-4 border border-[#e8dcc8]">
+                <p className="font-black text-[#1c1917] mb-0.5" style={{ fontSize: 15 }}>{name}</p>
+                {hood && <p className="text-xs mb-1" style={{ color: '#a0855a' }}>{hood}</p>}
+                {sb.notes && (
+                  <p className="text-sm leading-relaxed mt-1" style={{ color: '#5C4A2A' }}>{sb.notes}</p>
+                )}
+                <div className="flex gap-2 mt-3">
+                  <a
+                    href={mapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => posthog.capture('wc_supporters_bar_tapped', { country: sb.country })}
+                    className="flex-1 flex items-center justify-center py-2 rounded-xl font-black text-sm text-white transition-colors hover:opacity-90"
+                    style={{ background: '#B34207' }}
+                  >
+                    📍 Directions →
+                  </a>
+                  {hasVenue && onMoreInfo && (
+                    <button
+                      onClick={() => onMoreInfo(sb)}
+                      className="flex-1 flex items-center justify-center py-2 rounded-xl font-black text-sm border border-[#e8dcc8] transition-colors hover:border-[#B34207]/40"
+                      style={{ background: 'white', color: '#1c1917' }}
+                    >
+                      🍺 More Info →
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Main component
 // ---------------------------------------------------------------------------
@@ -384,16 +469,18 @@ export default function WorldCupClient({
   upcomingMatches,
   supportersBars,
   screeningBars,
+  screeningVenues,
 }: {
   todayMatches: WcMatch[];
   upcomingMatches: WcMatch[];
   supportersBars: SupportersBar[];
   screeningBars: WcScreeningBar[];
+  screeningVenues: WcVenueBar[];
 }) {
   const [index, setIndex] = useState(0);
   const [containerWidth, setContainerWidth] = useState(0);
-  const [expandedCountryId, setExpandedCountryId] = useState<string | null>(null);
-  const [showAllCountries, setShowAllCountries] = useState(false);
+  const [selectedSbGroup, setSelectedSbGroup] = useState<SupportersBar[] | null>(null);
+  const [selectedVenueSheet, setSelectedVenueSheet] = useState<SelectedVenue | null>(null);
   const [now, setNow] = useState(new Date());
   const [emojiIdx, setEmojiIdx] = useState(0);
   const [loadingVisible, setLoadingVisible] = useState(true);
@@ -480,10 +567,22 @@ export default function WorldCupClient({
   const filteredSupportersBars = supportersBars.filter(
     sb => sb.country !== 'Italy' && sb.country !== 'Ireland'
   );
-  const COUNTRIES_VISIBLE = 8;
-  const visibleCountries = showAllCountries
-    ? filteredSupportersBars
-    : filteredSupportersBars.slice(0, COUNTRIES_VISIBLE);
+
+  const groupedSupportersBars = useMemo(() => {
+    const map = new Map<string, SupportersBar[]>();
+    for (const sb of filteredSupportersBars) {
+      const list = map.get(sb.country) ?? [];
+      list.push(sb);
+      map.set(sb.country, list);
+    }
+    return Array.from(map.values());
+  }, [filteredSupportersBars]);
+
+  const screeningVenueIds = useMemo(
+    () => new Set(screeningVenues.map(v => v.id)),
+    [screeningVenues]
+  );
+
 
   const todayStr = now.toLocaleDateString('en-US', {
     timeZone: 'America/Vancouver',
@@ -639,6 +738,40 @@ export default function WorldCupClient({
         <FeaturedVenuesCarousel />
       </div>
 
+      {/* ── Find Your Country's Bar ──────────────────────────────────── */}
+      {filteredSupportersBars.length > 0 && (
+        <div className="pt-3 pb-1">
+          <p className="px-4 text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: 'rgba(255,255,255,0.55)' }}>
+            Find Your Country&apos;s Bar
+          </p>
+          <div
+            className="flex gap-2 overflow-x-auto px-4"
+            style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
+          >
+            {groupedSupportersBars.map(group => (
+              <button
+                key={group[0].country}
+                onClick={() => {
+                  posthog.capture('wc_supporters_bar_tapped', { country: group[0].country });
+                  setSelectedSbGroup(group);
+                }}
+                className="inline-flex items-center gap-1 text-xs font-semibold transition-all shrink-0"
+                style={{
+                  padding: '5px 10px', borderRadius: 100,
+                  background: 'rgba(255,255,255,0.10)',
+                  border: '1px solid rgba(255,255,255,0.22)',
+                  color: '#FFFFFF',
+                }}
+              >
+                <span>{group[0].flag}</span>
+                <span>{group[0].country}</span>
+              </button>
+            ))}
+            <div className="w-4 shrink-0" />
+          </div>
+        </div>
+      )}
+
       {/* ── WHERE TO WATCH map ───────────────────────────────────────── */}
       <div>
         <div className="flex items-center justify-between px-4 pt-4 pb-2">
@@ -661,63 +794,8 @@ export default function WorldCupClient({
         <WcScreeningMap screeningBars={screeningBars} supportersBarMap={supportersBarMap} />
       </div>
 
-      {/* ── Find Your Country's Bar ──────────────────────────────────── */}
-      {filteredSupportersBars.length > 0 && (
-        <div className="px-4 pt-4 pb-2">
-          <SectionHeader>Find Your Country&apos;s Bar</SectionHeader>
-
-          <div className="flex flex-wrap gap-1.5">
-            {visibleCountries.map(sb => (
-              <button
-                key={sb.id}
-                onClick={() => {
-                  posthog.capture('wc_supporters_bar_tapped', { country: sb.country });
-                  setExpandedCountryId(id => id === sb.id ? null : sb.id);
-                }}
-                className="inline-flex items-center gap-1 text-xs font-semibold transition-all"
-                style={{
-                  padding: '6px 10px', borderRadius: 100,
-                  background: expandedCountryId === sb.id ? '#B34207' : 'rgba(255,255,255,0.10)',
-                  border: expandedCountryId === sb.id
-                    ? '1px solid #B34207'
-                    : '1px solid rgba(255,255,255,0.22)',
-                  color: '#FFFFFF',
-                }}
-              >
-                <span>{sb.flag}</span>
-                <span>{sb.country}</span>
-                <svg
-                  width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                  strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-                  className={`transition-transform duration-200 ${expandedCountryId === sb.id ? 'rotate-180' : ''}`}
-                >
-                  <path d="M6 9l6 6 6-6" />
-                </svg>
-              </button>
-            ))}
-
-            {!showAllCountries && filteredSupportersBars.length > COUNTRIES_VISIBLE && (
-              <button
-                onClick={() => setShowAllCountries(true)}
-                className="inline-flex items-center gap-1 text-xs font-semibold"
-                style={{
-                  padding: '6px 10px', borderRadius: 100,
-                  background: 'transparent',
-                  border: '1px dashed #FFD966',
-                  color: '#FFD966',
-                }}
-              >
-                +{filteredSupportersBars.length - COUNTRIES_VISIBLE} more →
-              </button>
-            )}
-          </div>
-
-          {expandedCountryId && (() => {
-            const sb = filteredSupportersBars.find(s => s.id === expandedCountryId);
-            return sb ? <CountryDetail sb={sb} /> : null;
-          })()}
-        </div>
-      )}
+      {/* ── Where to Watch — venue list ─────────────────────────────── */}
+      <WcVenueList venues={screeningVenues} />
 
       {/* ── Cheapest pint CTA — mobile: inline card, desktop: fixed bottom bar ── */}
       <div className="md:hidden max-w-2xl mx-auto pb-8">
@@ -759,6 +837,28 @@ export default function WorldCupClient({
         </Link>
       </div>
     </main>
+
+      {selectedSbGroup && (
+        <SupportersBarSheet
+          sbs={selectedSbGroup}
+          onClose={() => setSelectedSbGroup(null)}
+          screeningVenueIds={screeningVenueIds}
+          onMoreInfo={sb => {
+            const matchingVenue = screeningVenues.find(v => v.id === sb.bar_id);
+            if (!matchingVenue) return;
+            setSelectedSbGroup(null);
+            setSelectedVenueSheet({
+              bar: matchingVenue,
+              price: cheapestPrice(matchingVenue, now),
+              hhActive: isHHActive(matchingVenue, now),
+            });
+          }}
+        />
+      )}
+
+      {selectedVenueSheet && (
+        <WcVenueSheet venue={selectedVenueSheet} onClose={() => setSelectedVenueSheet(null)} />
+      )}
     </>
   );
 }
