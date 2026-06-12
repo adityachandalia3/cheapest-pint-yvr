@@ -140,30 +140,6 @@ function getStatusBadge(matchDate: string, kickoffTime: string, now: Date, isVan
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
-function SectionHeader({ children, right }: { children: React.ReactNode; right?: React.ReactNode }) {
-  return (
-    <div className="flex items-center justify-between mb-3">
-      <div className="flex items-center gap-1.5">
-        <span className="relative flex h-2 w-2 shrink-0">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
-        </span>
-        <span
-          className="text-[10px] font-black uppercase tracking-widest"
-          style={{ color: 'rgba(255,255,255,0.92)' }}
-        >
-          {children}
-        </span>
-      </div>
-      {right && (
-        <span className="text-[10px] font-semibold" style={{ color: 'rgba(255,255,255,0.55)' }}>
-          {right}
-        </span>
-      )}
-    </div>
-  );
-}
-
 function MatchCardInner({ match, now, supportersBars, fontScale = 1 }: { match: WcMatch; now: Date; supportersBars: SupportersBar[]; fontScale?: number }) {
   const s = (n: number) => n * fontScale;
   const isVan = match.is_vancouver_match;
@@ -342,39 +318,6 @@ function MatchCardInner({ match, now, supportersBars, fontScale = 1 }: { match: 
 // Carousel variant — fills the full card slot
 function MatchCard({ match, now, supportersBars, fontScale = 1 }: { match: WcMatch; now: Date; supportersBars: SupportersBar[]; fontScale?: number }) {
   return <MatchCardInner match={match} now={now} supportersBars={supportersBars} fontScale={fontScale} />;
-}
-
-function CountryDetail({ sb }: { sb: SupportersBar }) {
-  const name = sb.bar?.name ?? sb.venue_name ?? sb.country;
-  const hood = sb.bar?.neighbourhood ?? sb.neighbourhood;
-  const mapsQuery = sb.bar
-    ? `${sb.bar.name} Vancouver BC`
-    : `${sb.venue_name ?? sb.country} Vancouver BC`;
-
-  return (
-    <div
-      className="mt-2 mx-1 p-3 rounded-xl"
-      style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)' }}
-    >
-      <p className="text-sm font-black" style={{ color: 'rgba(255,255,255,0.92)' }}>{name}</p>
-      {hood && <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.55)' }}>{hood}</p>}
-      {sb.notes && (
-        <p className="text-xs mt-1.5 leading-relaxed" style={{ color: 'rgba(255,255,255,0.6)' }}>
-          {sb.notes}
-        </p>
-      )}
-      <a
-        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapsQuery)}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex items-center gap-1 mt-2.5 text-xs font-black px-3 py-1.5 rounded-lg transition-opacity hover:opacity-80"
-        style={{ background: '#FFD966', color: '#14110c', textDecoration: 'none' }}
-        onClick={() => posthog.capture('wc_supporters_bar_tapped', { country: sb.country })}
-      >
-        📍 Get Directions
-      </a>
-    </div>
-  );
 }
 
 function SupportersBarSheet({

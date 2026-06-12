@@ -222,12 +222,10 @@ export function WcVenueSheet({ venue, onClose }: { venue: SelectedVenue; onClose
 function WcBarCard({
   bar,
   price,
-  hhActive,
   onClick,
 }: {
   bar: WcVenueBar;
   price: number;
-  hhActive: boolean;
   onClick: () => void;
 }) {
   return (
@@ -319,7 +317,6 @@ export default function WcVenueList({ venues }: { venues: WcVenueBar[] }) {
                 key={bar.id}
                 bar={bar}
                 price={price}
-                hhActive={hhActive}
                 onClick={() => setSelectedVenue({ bar, price, hhActive })}
               />
             ))}
