@@ -144,6 +144,9 @@ export function WcVenueSheet({ venue, onClose }: { venue: SelectedVenue; onClose
                 )}
               </p>
             )}
+            <p style={{ fontSize: 11, color: '#a0855a', fontStyle: 'italic', marginTop: 4 }}>
+              💡 Match-day specials may apply — check with the bar
+            </p>
           </div>
           <button
             onClick={onClose}
