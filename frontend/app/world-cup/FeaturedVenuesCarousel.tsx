@@ -2,6 +2,11 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 
+type VenueDetailSection = {
+  title?: string;
+  bullets: string[];
+};
+
 type FeaturedVenue = {
   id: string;
   badge: string;
@@ -11,6 +16,10 @@ type FeaturedVenue = {
   ctaHref: string;
   image: string;
   placeholderColor: string;
+  details?: {
+    address?: string;
+    sections: VenueDetailSection[];
+  };
 };
 
 const FEATURED_VENUES: FeaturedVenue[] = [
@@ -21,8 +30,29 @@ const FEATURED_VENUES: FeaturedVenue[] = [
     description: 'Free · The Shipyards, North Vancouver',
     cta: 'More Info →',
     ctaHref: 'https://news.canadasoccer.com/canada-soccer-announces-uber-eats-canada-soccer-house-north-vancouver-for-the-2026-fifa-world-cup',
-    image: '',
+    image: '/wc-featured/canada-soccer-house.jpg',
     placeholderColor: '#7b0000',
+    details: {
+      address: 'The Shipyards, North Vancouver',
+      sections: [
+        {
+          title: '🏟️ The Venue',
+          bullets: [
+            '29-foot outdoor screen',
+            'Free admission — no tickets needed',
+            'Footie festival village atmosphere',
+          ],
+        },
+        {
+          title: '🎉 On-site Partners',
+          bullets: [
+            'White Spot — Canadian comfort food',
+            'EB Games — gaming activations',
+            'Player meet-and-greets throughout the tournament',
+          ],
+        },
+      ],
+    },
   },
   {
     id: 'latincouver',
@@ -33,6 +63,27 @@ const FEATURED_VENUES: FeaturedVenue[] = [
     ctaHref: 'https://www.google.com/maps/search/?api=1&query=Latin+Plaza+Hub+68+Water+Street+Vancouver+BC',
     image: '/wc-featured/latincouver.jpg',
     placeholderColor: '#6b1515',
+    details: {
+      address: '68 Water Street, Gastown',
+      sections: [
+        {
+          title: '🌎 Latin America Hub',
+          bullets: [
+            'Official Tribuna Latina watch party space',
+            'Home base for all Latin American supporters',
+            'All matches screened live',
+          ],
+        },
+        {
+          title: '🎉 What to Expect',
+          bullets: [
+            'Vibrant atmosphere with flags and drums',
+            'Latin food & drinks',
+            'Family-friendly outdoor space',
+          ],
+        },
+      ],
+    },
   },
   {
     id: 'alliance-francaise',
@@ -43,6 +94,27 @@ const FEATURED_VENUES: FeaturedVenue[] = [
     ctaHref: 'https://www.google.com/maps/search/?api=1&query=Alliance+Francaise+Vancouver+BC',
     image: '',
     placeholderColor: '#00209F',
+    details: {
+      address: '6161 Cambie Street, Vancouver',
+      sections: [
+        {
+          title: '🎭 Theater Hall',
+          bullets: [
+            'Large-format screen for France matches',
+            'Seated viewing — book ahead for big games',
+            'Bilingual commentary & atmosphere',
+          ],
+        },
+        {
+          title: '🍷 Bar Lounge',
+          bullets: [
+            'French wines, beers & classic cocktails',
+            'Open before and after every match',
+            'Walk-in friendly for smaller games',
+          ],
+        },
+      ],
+    },
   },
   {
     id: 'fifa-fan-festival',
@@ -53,15 +125,132 @@ const FEATURED_VENUES: FeaturedVenue[] = [
     ctaHref: 'https://www.vancouverfwc26.ca/fifa-fan-festival',
     image: '/wc-featured/fifa-fan-festival.webp',
     placeholderColor: '#0a1628',
+    details: {
+      address: 'Hastings Park, Vancouver · Jun 11 – Jul 19',
+      sections: [
+        {
+          title: '🎟️ Admission',
+          bullets: [
+            'Free access to the main festival grounds',
+            'Premium seating tickets available for purchase',
+            'All World Cup matches screened live',
+          ],
+        },
+        {
+          title: '🍺 Food & Drink',
+          bullets: [
+            'Beer from $9.50–$10.50',
+            'Multiple food vendors on-site',
+            'Non-alcoholic options available',
+          ],
+        },
+        {
+          title: '🎉 Activities',
+          bullets: [
+            'FIFA interactive fan experiences',
+            'Live entertainment between matches',
+            'Merchandise & sponsor activations',
+          ],
+        },
+      ],
+    },
   },
 ];
 
 const SCALE_SIDE = 0.92;
 const OPACITY_SIDE = 0.55;
 
+// ── Detail sheet ──────────────────────────────────────────────────────────────
+
+function FeaturedVenueSheet({ venue, onClose }: { venue: FeaturedVenue; onClose: () => void }) {
+  return (
+    <>
+      <style>{`@keyframes fvSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }`}</style>
+      <div className="fixed inset-0 z-[500] bg-black/50" onClick={onClose} />
+      <div
+        className="fixed left-0 right-0 bottom-0 z-[501] max-h-[85vh] flex flex-col rounded-t-2xl shadow-2xl"
+        style={{ background: '#fffbeb', animation: 'fvSlideUp 0.25s ease-out' }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="w-10 h-1 bg-stone-300 rounded-full mx-auto mt-3 mb-1 shrink-0" />
+
+        {/* Header */}
+        <div className="flex items-start justify-between px-5 pt-2 pb-3 border-b border-[#e8dcc8] shrink-0">
+          <div className="min-w-0 pr-3">
+            <span style={{
+              display: 'inline-block',
+              background: 'rgba(0,0,0,0.06)',
+              border: '1px solid #e8dcc8',
+              color: '#5C4A2A',
+              fontSize: 10,
+              fontWeight: 700,
+              textTransform: 'uppercase' as const,
+              letterSpacing: '0.08em',
+              padding: '2px 8px',
+              borderRadius: 999,
+              marginBottom: 6,
+            }}>
+              {venue.badge}
+            </span>
+            <h2 className="font-black text-[#1c1917] leading-tight" style={{ fontSize: 18 }}>
+              {venue.name}
+            </h2>
+            {venue.details?.address && (
+              <p style={{ fontSize: 12, color: '#a0855a', marginTop: 3 }}>📍 {venue.details.address}</p>
+            )}
+          </div>
+          <button
+            onClick={onClose}
+            className="shrink-0 w-8 h-8 flex items-center justify-center rounded-full text-stone-400 hover:text-[#1c1917] hover:bg-stone-100 transition-all text-sm mt-0.5"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto px-5 py-4">
+          {venue.details?.sections.map((section, i) => (
+            <div key={i} style={{ marginBottom: i < (venue.details?.sections.length ?? 0) - 1 ? 16 : 0 }}>
+              {section.title && (
+                <p style={{ fontSize: 13, fontWeight: 700, color: '#1c1410', marginBottom: 6 }}>
+                  {section.title}
+                </p>
+              )}
+              {section.bullets.map((b, j) => (
+                <p key={j} style={{ fontSize: 13, color: '#5C4A2A', margin: '0 0 5px', lineHeight: 1.5 }}>
+                  • {b}
+                </p>
+              ))}
+            </div>
+          ))}
+        </div>
+
+        {/* CTA */}
+        <div
+          className="px-5 py-4 border-t border-[#e8dcc8] shrink-0"
+          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 16px)' }}
+        >
+          <a
+            href={venue.ctaHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex w-full items-center justify-center py-2.5 rounded-xl font-black text-sm text-white transition-colors hover:opacity-90"
+            style={{ background: '#B34207' }}
+          >
+            {venue.cta}
+          </a>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ── Carousel ──────────────────────────────────────────────────────────────────
+
 export default function FeaturedVenuesCarousel() {
   const [index, setIndex] = useState(0);
   const [containerWidth, setContainerWidth] = useState(0);
+  const [detailVenueId, setDetailVenueId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef<number | null>(null);
   const hasSwiped = useRef(false);
@@ -76,8 +265,6 @@ export default function FeaturedVenuesCarousel() {
   }, []);
 
   const count = FEATURED_VENUES.length;
-  // Mobile: card = 88% → peek = 6% each side
-  // Desktop: card = 76% → peek = 12% each side
   const isMobile = containerWidth > 0 ? containerWidth < 768 : true;
   const peekFraction = isMobile ? 0.06 : 0.12;
   const peek = containerWidth * peekFraction;
@@ -95,6 +282,8 @@ export default function FeaturedVenuesCarousel() {
   const go = useCallback((dir: 1 | -1) => {
     setIndex(i => (i + dir + count) % count);
   }, [count]);
+
+  const detailVenue = detailVenueId ? FEATURED_VENUES.find(v => v.id === detailVenueId) ?? null : null;
 
   return (
     <div className="pt-2 pb-1">
@@ -138,12 +327,15 @@ export default function FeaturedVenuesCarousel() {
           return (
             <div
               key={venue.id}
-              onClick={() => { if (!isActive) setIndex(i); }}
+              onClick={() => {
+                if (!isActive) { setIndex(i); return; }
+                if (venue.details) setDetailVenueId(venue.id);
+              }}
               style={{
                 position: 'absolute', top: 0, left: '50%',
                 width: cardWidth, height: '100%', marginLeft: -cardWidth / 2,
                 transition: 'transform 0.3s cubic-bezier(0.25,0.46,0.45,0.94), opacity 0.3s ease',
-                cursor: isActive ? 'default' : 'pointer',
+                cursor: 'pointer',
                 ...getCardStyle(diff),
               }}
             >
@@ -152,10 +344,10 @@ export default function FeaturedVenuesCarousel() {
           );
         })}
 
-        {/* Arrow buttons — desktop only */}
+        {/* Arrow buttons */}
         <button
           onClick={() => go(-1)}
-          className="hidden md:flex absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 items-center justify-center rounded-full transition-colors z-20"
+          className="flex absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 items-center justify-center rounded-full transition-colors z-20"
           style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)' }}
           aria-label="Previous venue"
         >
@@ -165,7 +357,7 @@ export default function FeaturedVenuesCarousel() {
         </button>
         <button
           onClick={() => go(1)}
-          className="hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 items-center justify-center rounded-full transition-colors z-20"
+          className="flex absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 items-center justify-center rounded-full transition-colors z-20"
           style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)' }}
           aria-label="Next venue"
         >
@@ -191,6 +383,10 @@ export default function FeaturedVenuesCarousel() {
           />
         ))}
       </div>
+
+      {detailVenue && (
+        <FeaturedVenueSheet venue={detailVenue} onClose={() => setDetailVenueId(null)} />
+      )}
     </div>
   );
 }
@@ -248,26 +444,45 @@ function VenueCard({ venue }: { venue: FeaturedVenue }) {
             {venue.description}
           </p>
         </div>
-        <a
-          href={venue.ctaHref}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={e => e.stopPropagation()}
-          style={{
-            display: 'inline-block',
-            background: '#FFD966',
-            color: '#14110c',
-            borderRadius: 999,
-            padding: '6px 14px',
-            fontSize: 11,
-            fontWeight: 600,
-            textDecoration: 'none',
-            whiteSpace: 'nowrap',
-            flexShrink: 0,
-          }}
-        >
-          {venue.cta}
-        </a>
+        {venue.details ? (
+          <span
+            style={{
+              display: 'inline-block',
+              background: '#FFD966',
+              color: '#14110c',
+              borderRadius: 999,
+              padding: '6px 14px',
+              fontSize: 11,
+              fontWeight: 600,
+              textDecoration: 'none',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+            }}
+          >
+            More Info →
+          </span>
+        ) : (
+          <a
+            href={venue.ctaHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={e => e.stopPropagation()}
+            style={{
+              display: 'inline-block',
+              background: '#FFD966',
+              color: '#14110c',
+              borderRadius: 999,
+              padding: '6px 14px',
+              fontSize: 11,
+              fontWeight: 600,
+              textDecoration: 'none',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+            }}
+          >
+            {venue.cta}
+          </a>
+        )}
       </div>
     </div>
   );

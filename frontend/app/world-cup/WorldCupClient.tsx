@@ -8,6 +8,8 @@ import type { WcMatch, SupportersBar, NeutralBarData, WcScreeningBar, WcVenueBar
 import WcVenueList, { WcVenueSheet, SelectedVenue, cheapestPrice, isHHActive } from './WcVenueList';
 import { getTeamColors } from '@/lib/teamColors';
 import FeaturedVenuesCarousel from './FeaturedVenuesCarousel';
+import WhereToWatchEntry from '@/components/world-cup/WhereToWatchEntry';
+import WhereToWatchSheet from '@/components/world-cup/WhereToWatchSheet';
 
 const WcScreeningMap = dynamic(() => import('./WcScreeningMap'), { ssr: false });
 
@@ -424,6 +426,7 @@ export default function WorldCupClient({
   const [containerWidth, setContainerWidth] = useState(0);
   const [selectedSbGroup, setSelectedSbGroup] = useState<SupportersBar[] | null>(null);
   const [selectedVenueSheet, setSelectedVenueSheet] = useState<SelectedVenue | null>(null);
+  const [showWhereToWatch, setShowWhereToWatch] = useState(false);
   const [now, setNow] = useState(new Date());
   const [emojiIdx, setEmojiIdx] = useState(0);
   const [loadingVisible, setLoadingVisible] = useState(true);
@@ -676,6 +679,9 @@ export default function WorldCupClient({
         )}
       </div>
 
+      {/* ── Where should I watch? ────────────────────────────────────── */}
+      <WhereToWatchEntry onClick={() => setShowWhereToWatch(true)} />
+
       {/* ── Featured Venues Carousel ────────────────────────────────── */}
       <div className="pt-2">
         <FeaturedVenuesCarousel />
@@ -780,6 +786,17 @@ export default function WorldCupClient({
         </Link>
       </div>
     </main>
+
+      {showWhereToWatch && (
+        <WhereToWatchSheet
+          todayMatches={todayMatches}
+          upcomingMatches={upcomingMatches}
+          screeningVenues={screeningVenues}
+          supportersBars={supportersBars}
+          onClose={() => setShowWhereToWatch(false)}
+          onShowVenue={v => { setShowWhereToWatch(false); setSelectedVenueSheet(v); }}
+        />
+      )}
 
       {selectedSbGroup && (
         <SupportersBarSheet
