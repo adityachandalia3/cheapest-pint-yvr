@@ -3,6 +3,9 @@
 Scrapes bar websites and uses Claude to extract World Cup 2026 screening
 profile info, saving results to the wc_profile JSONB column in Supabase.
 
+Targets all screening_confirmed bars that don't have a wc_profile yet,
+so it's safe to re-run — already-scraped bars are automatically skipped.
+
 Usage:
     python scripts/wc_profile_scraper.py           # dry-run (no DB writes)
     python scripts/wc_profile_scraper.py --save    # write results to Supabase
@@ -49,15 +52,6 @@ load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "..", ".env"))
 SUPABASE_URL      = os.environ["SUPABASE_URL"]
 SUPABASE_KEY      = os.environ["SUPABASE_SERVICE_KEY"]
 ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
-
-# ── target bars ─────────────────────────────────────────────────────────────
-BAR_IDS = [
-    "2aae2142-e4c0-42b4-98f9-b7665bafb2c9",  # Shark Club
-    "02399fe8-fd22-4b74-9428-91e9ecaa6191",  # Red Card Sports Bar
-    "1d9202b0-ca3a-421f-bebb-cdaa6a56fb47",  # The Pint Public House
-    "d98ff772-42e7-4d80-a246-63193b845f25",  # Blarney Stone
-    "0092f054-64c0-4542-a314-7a71e7a5db42",  # The Park Pub
-]
 
 EXTRA_PATHS = ["/events", "/specials", "/world-cup"]
 
@@ -172,21 +166,28 @@ def extract_profile(text: str, bar_name: str, source_url: str) -> tuple[dict, in
 
 def main(save: bool) -> None:
     sb = create_client(SUPABASE_URL, SUPABASE_KEY)
-    ac_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)  # noqa: F841
 
-    # Fetch bar records
-    res = sb.from_("bars").select("id, name, website").in_("id", BAR_IDS).execute()
-    bars = {b["id"]: b for b in (res.data or [])}
+    # Fetch all confirmed screening bars without a wc_profile yet
+    res = (
+        sb.from_("bars")
+        .select("id, name, website")
+        .eq("screening_confirmed", True)
+        .is_("wc_profile", "null")
+        .execute()
+    )
+    bars = res.data or []
+
+    print(f"Found {len(bars)} bars without wc_profile. Starting scrape...")
+
+    if not bars:
+        print("Nothing to do.")
+        return
 
     total_in = total_out = 0
     results: list[dict] = []
 
-    for bar_id in BAR_IDS:
-        bar = bars.get(bar_id)
-        if not bar:
-            print(f"⚠️  Bar {bar_id} not found in Supabase — skipping")
-            continue
-
+    for i, bar in enumerate(bars):
+        bar_id  = bar["id"]
         name    = bar["name"]
         website = bar.get("website")
 
@@ -205,7 +206,6 @@ def main(save: bool) -> None:
 
         results.append({"id": bar_id, "name": name, "profile": profile})
 
-        # Print summary
         def val(k: str) -> str:
             v = profile.get(k)
             return str(v) if v is not None else "—"
@@ -219,7 +219,7 @@ def main(save: bool) -> None:
         print(f"      source:            {val('source_url')}")
         print(f"      tokens:            {in_tok} in / {out_tok} out")
 
-        if bar_id != BAR_IDS[-1]:
+        if i < len(bars) - 1:
             time.sleep(2)
 
     # Cost estimate
