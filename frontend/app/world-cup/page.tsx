@@ -55,6 +55,7 @@ export type WcVenueBar = {
   name: string;
   neighbourhood: string | null;
   average_rating: number | null;
+  review_count: number | null;
   wc_profile: WcProfile | null;
   pint_prices: Array<{ price_cad: number | null; happy_hour_price_cad: number | null; category: string }>;
   happy_hour_windows: Array<{ days: string[]; start_time: string; end_time: string }>;
@@ -120,7 +121,7 @@ export default async function WorldCupPage() {
 
     // Bars confirmed to be screening — used for the venue list below the map
     sb.from('bars')
-      .select('id, name, neighbourhood, average_rating, wc_profile, pint_prices(price_cad, happy_hour_price_cad, category), happy_hour_windows(days, start_time, end_time)')
+      .select('id, name, neighbourhood, average_rating, review_count, wc_profile, pint_prices(price_cad, happy_hour_price_cad, category), happy_hour_windows(days, start_time, end_time)')
       .eq('screening_confirmed', true)
       .eq('is_permanently_closed', false),
   ]);

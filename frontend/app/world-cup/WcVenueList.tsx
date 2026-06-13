@@ -278,9 +278,7 @@ export default function WcVenueList({ venues }: { venues: WcVenueBar[] }) {
         .sort((a, b) => {
           const diff = confidenceRank(a.bar.wc_profile) - confidenceRank(b.bar.wc_profile);
           if (diff !== 0) return diff;
-          const pa = a.price < Infinity ? a.price : 9999;
-          const pb = b.price < Infinity ? b.price : 9999;
-          return pa - pb;
+          return (b.bar.review_count ?? 0) - (a.bar.review_count ?? 0);
         }),
     [venues, now]
   );
