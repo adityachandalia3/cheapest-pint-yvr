@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import PintMapClient from '@/components/PintMapClient';
 import CommunityPopup from '@/components/CommunityPopup';
 import JsonLd from '@/components/JsonLd';
+import WcPromoBanner from '@/components/WcPromoBanner';
 import { Bar } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -48,6 +49,7 @@ export default async function Home() {
   return (
     <>
       <h1 className="sr-only">Find the Cheapest Pint in Vancouver</h1>
+      <WcPromoBanner />
       <PintMapClient initialBars={(data ?? []) as Bar[]} />
       <CommunityPopup />
       <JsonLd />
