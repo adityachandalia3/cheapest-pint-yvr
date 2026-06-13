@@ -63,7 +63,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AppProviders>
           <SiteNav />
           {/* pb accounts for the fixed mobile bottom tab bar */}
-          <div className="pb-[72px] md:pb-0">
+          <div>
             {children}
             <SiteFooter />
           </div>

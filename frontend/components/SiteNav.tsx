@@ -179,7 +179,7 @@ export default function SiteNav() {
 
       {/* ── Mobile bottom tab bar ───────────────────────────────────────── */}
       <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#faf5eb] border-t border-[#e8dcc8]"
+        className="hidden fixed bottom-0 left-0 right-0 z-50 bg-[#faf5eb] border-t border-[#e8dcc8]"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         <div className="flex">
