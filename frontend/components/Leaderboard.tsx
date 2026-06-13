@@ -102,7 +102,7 @@ export default function Leaderboard({
   const showNearMe = nearMeActive && !nearMeFallback;
 
   return (
-    <section className="max-w-6xl mx-auto px-4 py-8">
+    <section className="max-w-6xl mx-auto px-4 pt-4 pb-8">
       <div className="flex items-center justify-between mb-5">
         <h2 className="text-xl md:text-2xl font-black text-[#1c1917]">
           {showNearMe ? '📍' : '🏆'}{' '}

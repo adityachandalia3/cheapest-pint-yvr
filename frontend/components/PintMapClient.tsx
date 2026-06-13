@@ -3,6 +3,7 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import HeroSection from './HeroSection';
 import FilterBar from './FilterBar';
 import VibeSearch, { VIBE_CHIPS } from './VibeSearch';
@@ -286,6 +287,23 @@ export default function PintMapClient({ initialBars }: { initialBars: Bar[] }) {
           userLocation={nearMe.userLocation}
           showResetView
         />
+      </div>
+
+      {/* Crawl builder banner */}
+      <div className="px-4 pt-3 pb-0">
+        <Link
+          href="/crawl-builder"
+          className="flex items-center justify-between gap-3 active:scale-[0.99] transition-all"
+          style={{ background: '#fffbeb', border: '1px solid #e8dcc8', borderRadius: 14, padding: '14px 16px', textDecoration: 'none' }}
+        >
+          <div>
+            <p style={{ fontSize: 13, fontWeight: 700, color: '#1c1410', margin: 0 }}>🗺️ Planning a night out?</p>
+            <p style={{ fontSize: 11, color: '#a0855a', margin: '3px 0 0' }}>Build your pub crawl in seconds</p>
+          </div>
+          <span style={{ background: '#B34207', color: 'white', borderRadius: 999, padding: '8px 16px', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>
+            Build a Crawl →
+          </span>
+        </Link>
       </div>
 
       {/* Leaderboard */}

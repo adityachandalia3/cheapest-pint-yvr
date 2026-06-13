@@ -150,6 +150,14 @@ export default function SiteNav() {
             )}
           </div>
 
+          {/* Build a Crawl — nav item, desktop only */}
+          <Link
+            href="/crawl-builder"
+            className="hidden md:flex ml-2 items-center gap-1.5 px-3 py-1.5 rounded-lg text-stone-600 hover:text-[#B34207] hover:bg-[#fde8c4]/40 transition-all whitespace-nowrap"
+          >
+            <span style={{ fontSize: 13, fontWeight: 500 }}>🗺️ Build a Crawl</span>
+          </Link>
+
           {/* My Picks — icon + label on desktop */}
           <button
             onClick={() => setMyPicksOpen(true)}
@@ -166,14 +174,6 @@ export default function SiteNav() {
             </span>
             <span style={{ fontSize: 13, fontWeight: 500 }}>My Picks</span>
           </button>
-
-          {/* Build a Crawl — pill CTA */}
-          <Link
-            href="/crawl-builder"
-            className="ml-1 flex items-center gap-1.5 text-sm font-black text-[#B34207] border border-[#B34207] hover:bg-[#B34207] hover:text-white px-4 py-2 rounded-full transition-all duration-200 whitespace-nowrap"
-          >
-            🗺 Build a Crawl
-          </Link>
         </nav>
       </header>
 
@@ -243,6 +243,22 @@ export default function SiteNav() {
           >
             <div className="w-10 h-1 bg-stone-200 rounded-full mx-auto mt-3 mb-4" />
             <p className="text-xs font-black text-stone-400 uppercase tracking-widest px-6 mb-2">Menu</p>
+            {/* Build a Crawl — featured item */}
+            <div className="px-4 mb-3">
+              <Link
+                href="/crawl-builder"
+                onClick={() => setMoreOpen(false)}
+                className="flex items-center gap-3 w-full text-left"
+                style={{ background: '#B34207', color: 'white', borderRadius: 10, padding: '12px 16px', boxShadow: '0 2px 12px rgba(179,66,7,0.3)', textDecoration: 'none' }}
+              >
+                <span style={{ fontSize: 22, lineHeight: 1 }}>🗺️</span>
+                <div>
+                  <p style={{ fontSize: 15, fontWeight: 700, margin: 0, lineHeight: 1.2 }}>Build a Crawl</p>
+                  <p style={{ fontSize: 11, margin: '2px 0 0', color: 'rgba(255,255,255,0.7)' }}>Plan your night out →</p>
+                </div>
+              </Link>
+            </div>
+            <div className="border-t border-[#e8dcc8] mx-4 mb-1" />
             {/* Join the Community — always first */}
             <button
               onClick={() => { setMoreOpen(false); setCommunityOpen(true); }}
