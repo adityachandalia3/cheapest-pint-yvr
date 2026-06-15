@@ -15,6 +15,11 @@ export default function SiteFooter() {
         </svg>
         @getbrewscanner
       </a>
+      <div className="flex justify-center mb-4">
+        <a href="https://launchpadly.co/startup/brewscanner" target="_blank" rel="noopener noreferrer" data-launchpadly-badge="brewscanner" data-launchpadly-badge-variant="listed-on">
+          <img src="https://launchpadly.co/embed/badges/startup/brewscanner.svg?variant=listed-on" alt="Launchpadly Startup Directory" width="160" height="30" style={{ display: 'block', border: 0 }} />
+        </a>
+      </div>
       <nav className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5">
         <Link href="/terms" className="text-[11px] text-stone-400 hover:text-[#B34207] transition-colors">
           Terms &amp; Conditions
