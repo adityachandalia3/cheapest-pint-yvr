@@ -9,7 +9,7 @@ import type { SelectedVenue } from '@/app/world-cup/WcVenueList';
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 type Vibe = 'cheap' | 'fans' | 'chill';
-type Step = 1 | 2 | 3;
+type Step = 1 | 2 | 3 | 4;
 
 type WatchResult = {
   id: string | null;
@@ -21,6 +21,8 @@ type WatchResult = {
   wcProfile: WcProfile | null;
   supportersBadge: string | null;
   whyLine: string;
+  capacityWarning: boolean;
+  bookAheadUrgent: boolean;
   mapsUrl: string;
 };
 
@@ -38,9 +40,12 @@ type Recs = {
   primary: WatchResult | null;
   communityPrimary: CommunityResult | null;
   alternatives: WatchResult[];
+  bookAheadPicks: WatchResult[];
+  hiddenGems: WatchResult[];
   alsoWorthKnowing: CommunityResult[];
   fifaFestival: CommunityResult | null;
   noSupportersNote?: string;
+  areaFallback?: string;
 };
 
 // ── Community venues ───────────────────────────────────────────────────────────
@@ -116,11 +121,7 @@ function windowContains(start: string, end: string, t: string): boolean {
   return s <= e ? tt >= s && tt <= e : tt >= s || tt <= e;
 }
 
-function hhAtKickoff(
-  bar: WcVenueBar,
-  matchDate: string,
-  kickoffTime: string,
-): { active: boolean; endDisplay: string | null } {
+function hhAtKickoff(bar: WcVenueBar, matchDate: string, kickoffTime: string): { active: boolean; endDisplay: string | null } {
   const day = dayAbbrFor(matchDate);
   for (const w of bar.happy_hour_windows) {
     if (!w.days.includes(day)) continue;
@@ -131,7 +132,7 @@ function hhAtKickoff(
   return { active: false, endDisplay: null };
 }
 
-// World Cup 2026 runs Jun–Jul; Vancouver is PDT (UTC-7)
+// World Cup 2026: Vancouver is PDT (UTC-7) during Jun–Jul
 function kickoffInHours(matchDate: string, kickoffTime: string, now: Date): number {
   const [y, mo, d] = matchDate.split('-').map(Number);
   const [h, min] = kickoffTime.split(':').map(Number);
@@ -145,39 +146,34 @@ function gmapsUrl(name: string): string {
 
 function fw(s: string, n: number) { return s.trim().split(/\s+/).slice(0, n).join(' '); }
 
-function computeWhyLine(
-  v: WcVenueBar,
-  match: WcMatch,
-  now: Date,
-  supportersCountry?: string,
-): string {
+function computeWhyLine(v: WcVenueBar, match: WcMatch, now: Date, supportersCountry?: string): string {
   if (supportersCountry) return `Home of ${supportersCountry} fans in Vancouver`;
-
   const p = v.wc_profile;
   if (p?.special_features && p.special_features !== 'null') return fw(p.special_features, 8);
-
   const hh = hhAtKickoff(v, match.match_date, match.kickoff_time);
   if (hh.active) return 'Happy hour active during kickoff 🟢';
-
   if (p?.opens_early === true) {
     const [h] = match.kickoff_time.split(':').map(Number);
     if (h < 12) return 'Opens early for this match 🌅';
   }
-
   const hrs = kickoffInHours(match.match_date, match.kickoff_time, now);
+  if (p?.capacity_notes?.toLowerCase().includes('fills up')) return 'Fills up fast — arrive 30 mins before kickoff ⏰';
+  if (p?.capacity_notes?.toLowerCase().includes('large')) return 'Large venue — easier to walk in last minute 🚪';
   if (p?.booking_required === false && hrs >= 0 && hrs <= 3) return 'Walk-ins welcome right now 🚪';
-
   const price = cheapestPrice(v, now);
   if (price < 6) return "One of Vancouver's cheapest pints 🍺";
-
   if ((v.average_rating ?? 0) > 4.5) return 'Top rated sports bar in Vancouver ⭐';
-
   return 'Confirmed screening all World Cup matches ⚽';
 }
 
 function fromVenue(v: WcVenueBar, match: WcMatch, now: Date, badge?: string, supportersCountry?: string): WatchResult {
   const p = cheapestPrice(v, now);
   const hh = hhAtKickoff(v, match.match_date, match.kickoff_time);
+  const hrs = kickoffInHours(match.match_date, match.kickoff_time, now);
+  const bookAheadUrgent = v.wc_profile?.booking_required === true && hrs >= 0 && hrs <= 6;
+  const capacityWarning = v.wc_profile?.booking_required === true ||
+    (v.wc_profile?.capacity_notes?.toLowerCase().includes('small') ?? false) ||
+    (v.wc_profile?.capacity_notes?.toLowerCase().includes('fills up') ?? false);
   return {
     id: v.id,
     name: v.name,
@@ -188,6 +184,8 @@ function fromVenue(v: WcVenueBar, match: WcMatch, now: Date, badge?: string, sup
     wcProfile: v.wc_profile,
     supportersBadge: badge ?? null,
     whyLine: computeWhyLine(v, match, now, supportersCountry),
+    capacityWarning,
+    bookAheadUrgent,
     mapsUrl: gmapsUrl(v.name),
   };
 }
@@ -205,6 +203,8 @@ function fromSupportersBar(sb: SupportersBar): WatchResult {
     wcProfile: null,
     supportersBadge: `${sb.flag} ${barName}`,
     whyLine: `Home of ${sb.country} fans in Vancouver`,
+    capacityWarning: false,
+    bookAheadUrgent: false,
     mapsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`,
   };
 }
@@ -214,12 +214,7 @@ function cheapPrice(v: WcVenueBar, now: Date): number {
   return p < Infinity ? p : 9999;
 }
 
-// Single-pass boost (move up 1) + penalty (move down 1)
-function applyBoostPenalty<T>(
-  arr: T[],
-  shouldBoost: (item: T) => boolean,
-  shouldPenalize: (item: T) => boolean,
-): T[] {
+function applyBoostPenalty<T>(arr: T[], shouldBoost: (i: T) => boolean, shouldPenalize: (i: T) => boolean): T[] {
   const r = [...arr];
   for (let i = r.length - 1; i >= 1; i--) {
     if (shouldBoost(r[i]) && !shouldBoost(r[i - 1])) [r[i - 1], r[i]] = [r[i], r[i - 1]];
@@ -230,17 +225,55 @@ function applyBoostPenalty<T>(
   return r;
 }
 
+function computeExtraSections(
+  filteredVenues: WcVenueBar[],
+  shownIds: Set<string | null>,
+  match: WcMatch,
+  now: Date,
+): { bookAheadPicks: WatchResult[]; hiddenGems: WatchResult[] } {
+  const bookAheadPicks = filteredVenues
+    .filter(v =>
+      !shownIds.has(v.id) &&
+      v.wc_profile?.booking_required === true,
+    )
+    .slice(0, 2)
+    .map(v => fromVenue(v, match, now));
+
+  const bookAheadIds = new Set(bookAheadPicks.map(b => b.id));
+  const hiddenGems = filteredVenues
+    .filter(v =>
+      !shownIds.has(v.id) &&
+      !bookAheadIds.has(v.id) &&
+      v.wc_profile?.confidence === 'high' &&
+      (v.review_count === null || v.review_count < 300),
+    )
+    .slice(0, 2)
+    .map(v => fromVenue(v, match, now));
+
+  return { bookAheadPicks, hiddenGems };
+}
+
 function getRecommendations(
   vibe: Vibe,
   match: WcMatch,
   venues: WcVenueBar[],
   sbs: SupportersBar[],
   now: Date,
+  selectedArea: string | null,
 ): Recs {
-  if (venues.length === 0) {
+  // Area filter
+  let filteredVenues = selectedArea ? venues.filter(v => v.neighbourhood === selectedArea) : venues;
+  let areaFallback: string | undefined;
+  if (selectedArea && filteredVenues.length === 0) {
+    filteredVenues = venues;
+    areaFallback = `No confirmed venues in ${selectedArea} — showing all`;
+  }
+
+  if (filteredVenues.length === 0) {
     return {
-      primary: { id: null, name: 'No venues found', neighbourhood: null, price: null, hhActiveAtKickoff: false, hhEndDisplay: null, wcProfile: null, supportersBadge: null, whyLine: 'Check back soon', mapsUrl: '' },
-      communityPrimary: null, alternatives: [], alsoWorthKnowing: [], fifaFestival: null,
+      primary: { id: null, name: 'No venues found', neighbourhood: null, price: null, hhActiveAtKickoff: false, hhEndDisplay: null, wcProfile: null, supportersBadge: null, whyLine: 'Check back soon', capacityWarning: false, bookAheadUrgent: false, mapsUrl: '' },
+      communityPrimary: null, alternatives: [], bookAheadPicks: [], hiddenGems: [],
+      alsoWorthKnowing: [], fifaFestival: null,
     };
   }
 
@@ -250,19 +283,13 @@ function getRecommendations(
 
   // ── cheap ──
   if (vibe === 'cheap') {
-    const base = [...venues].sort((a, b) => cheapPrice(a, now) - cheapPrice(b, now));
-    const sorted = applyBoostPenalty(
-      base,
-      v => hhAtKickoff(v, match.match_date, match.kickoff_time).active,
-      bookingPenalty,
-    );
-    return {
-      primary: fromVenue(sorted[0], match, now),
-      communityPrimary: null,
-      alternatives: sorted.slice(1, 3).map(v => fromVenue(v, match, now)),
-      alsoWorthKnowing: [],
-      fifaFestival: null,
-    };
+    const base = [...filteredVenues].sort((a, b) => cheapPrice(a, now) - cheapPrice(b, now));
+    const sorted = applyBoostPenalty(base, v => hhAtKickoff(v, match.match_date, match.kickoff_time).active, bookingPenalty);
+    const primary = fromVenue(sorted[0], match, now);
+    const alternatives = sorted.slice(1, 3).map(v => fromVenue(v, match, now));
+    const shownIds = new Set([primary.id, ...alternatives.map(a => a.id)]);
+    const { bookAheadPicks, hiddenGems } = computeExtraSections(filteredVenues, shownIds, match, now);
+    return { primary, communityPrimary: null, alternatives, bookAheadPicks, hiddenGems, alsoWorthKnowing: [], fifaFestival: null, areaFallback };
   }
 
   // ── fans ──
@@ -279,20 +306,18 @@ function getRecommendations(
       chosen = homeEntry ?? awayEntry ?? null;
     }
 
-    // Community venues matching either team (FIFA handled separately as Step D)
     const communityMatches = COMMUNITY_VENUES
       .filter(cv => cv.teams.length > 0 && (cv.teams.includes(match.team_home) || cv.teams.includes(match.team_away)))
       .map(toCommunityResult);
 
-    // Step A: supporters bar found
     if (chosen) {
-      const venueMatch = chosen.bar_id ? venues.find(v => v.id === chosen!.bar_id) : null;
+      const venueMatch = chosen.bar_id ? filteredVenues.find(v => v.id === chosen!.bar_id) : null;
       const badge = `${chosen.flag} ${chosen.bar?.name ?? chosen.venue_name ?? chosen.country}`;
       const primary = venueMatch
         ? fromVenue(venueMatch, match, now, badge, chosen.country)
         : fromSupportersBar(chosen);
       const targetHood = chosen.bar?.neighbourhood ?? chosen.neighbourhood;
-      const others = venues
+      const others = filteredVenues
         .filter(v => v.id !== chosen!.bar_id)
         .sort((a, b) => {
           const ah = a.neighbourhood === targetHood ? 0 : 1;
@@ -300,52 +325,33 @@ function getRecommendations(
           if (ah !== bh) return ah - bh;
           return cheapPrice(a, now) - cheapPrice(b, now);
         });
-      return {
-        primary,
-        communityPrimary: null,
-        alternatives: others.slice(0, 2).map(v => fromVenue(v, match, now)),
-        alsoWorthKnowing: communityMatches,
-        fifaFestival: FIFA_FESTIVAL,
-      };
+      const alternatives = others.slice(0, 2).map(v => fromVenue(v, match, now));
+      const shownIds = new Set([primary.id, ...alternatives.map(a => a.id)]);
+      const { bookAheadPicks, hiddenGems } = computeExtraSections(filteredVenues, shownIds, match, now);
+      return { primary, communityPrimary: null, alternatives, bookAheadPicks, hiddenGems, alsoWorthKnowing: communityMatches, fifaFestival: FIFA_FESTIVAL, areaFallback };
     }
 
-    // Step B/C: no supporters bar — community venue as primary if available
     if (communityMatches.length > 0) {
-      return {
-        primary: null,
-        communityPrimary: communityMatches[0],
-        alternatives: [],
-        alsoWorthKnowing: communityMatches.slice(1),
-        fifaFestival: FIFA_FESTIVAL,
-      };
+      const { bookAheadPicks, hiddenGems } = computeExtraSections(filteredVenues, new Set([null]), match, now);
+      return { primary: null, communityPrimary: communityMatches[0], alternatives: [], bookAheadPicks, hiddenGems, alsoWorthKnowing: communityMatches.slice(1), fifaFestival: FIFA_FESTIVAL, areaFallback };
     }
 
-    // Step C fallback: top bars by review_count
-    const sorted = [...venues].sort((a, b) => (b.review_count ?? 0) - (a.review_count ?? 0));
-    return {
-      primary: fromVenue(sorted[0], match, now),
-      communityPrimary: null,
-      alternatives: sorted.slice(1, 3).map(v => fromVenue(v, match, now)),
-      alsoWorthKnowing: [],
-      fifaFestival: FIFA_FESTIVAL,
-      noSupportersNote: 'No dedicated supporters bar found — here are the best spots to watch',
-    };
+    const sorted = [...filteredVenues].sort((a, b) => (b.review_count ?? 0) - (a.review_count ?? 0));
+    const primary = fromVenue(sorted[0], match, now);
+    const alternatives = sorted.slice(1, 3).map(v => fromVenue(v, match, now));
+    const shownIds = new Set([primary.id, ...alternatives.map(a => a.id)]);
+    const { bookAheadPicks, hiddenGems } = computeExtraSections(filteredVenues, shownIds, match, now);
+    return { primary, communityPrimary: null, alternatives, bookAheadPicks, hiddenGems, alsoWorthKnowing: [], fifaFestival: FIFA_FESTIVAL, noSupportersNote: 'No dedicated supporters bar found — here are the best spots to watch', areaFallback };
   }
 
   // ── chill ──
-  const base = [...venues].sort((a, b) => (b.average_rating ?? 0) - (a.average_rating ?? 0));
-  const sorted = applyBoostPenalty(
-    base,
-    v => v.wc_profile?.atmosphere === 'chill',
-    bookingPenalty,
-  );
-  return {
-    primary: fromVenue(sorted[0], match, now),
-    communityPrimary: null,
-    alternatives: sorted.slice(1, 3).map(v => fromVenue(v, match, now)),
-    alsoWorthKnowing: [],
-    fifaFestival: null,
-  };
+  const base = [...filteredVenues].sort((a, b) => (b.average_rating ?? 0) - (a.average_rating ?? 0));
+  const sorted = applyBoostPenalty(base, v => v.wc_profile?.atmosphere === 'chill', bookingPenalty);
+  const primary = fromVenue(sorted[0], match, now);
+  const alternatives = sorted.slice(1, 3).map(v => fromVenue(v, match, now));
+  const shownIds = new Set([primary.id, ...alternatives.map(a => a.id)]);
+  const { bookAheadPicks, hiddenGems } = computeExtraSections(filteredVenues, shownIds, match, now);
+  return { primary, communityPrimary: null, alternatives, bookAheadPicks, hiddenGems, alsoWorthKnowing: [], fifaFestival: null, areaFallback };
 }
 
 // ── Chip renderer ──────────────────────────────────────────────────────────────
@@ -383,9 +389,7 @@ type CardActions = {
 
 function resolveAction(result: WatchResult, { screeningVenues, now, onShowVenue }: CardActions) {
   const venue = result.id ? screeningVenues.find(v => v.id === result.id) : null;
-  if (venue) {
-    return () => onShowVenue({ bar: venue, price: cheapestPrice(venue, now), hhActive: isHHActive(venue, now) });
-  }
+  if (venue) return () => onShowVenue({ bar: venue, price: cheapestPrice(venue, now), hhActive: isHHActive(venue, now) });
   return () => window.open(result.mapsUrl, '_blank');
 }
 
@@ -405,24 +409,33 @@ function PrimaryCard({ result, actions }: { result: WatchResult; actions: CardAc
           {result.supportersBadge}
         </span>
       )}
-      <p style={{ fontSize: 16, fontWeight: 700, color: '#1c1410', margin: 0, lineHeight: 1.2 }}>
-        {result.name}
-      </p>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+        <p style={{ fontSize: 16, fontWeight: 700, color: '#1c1410', margin: 0, lineHeight: 1.2 }}>{result.name}</p>
+        {result.capacityWarning && (
+          <span style={{ display: 'inline-block', background: '#FEF3C7', border: '1px solid #F59E0B', color: '#92400E', borderRadius: 999, padding: '2px 8px', fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0 }}>
+            ⚠️ Gets packed fast
+          </span>
+        )}
+      </div>
       {result.whyLine && (
-        <p style={{ fontSize: 11, color: '#a0855a', fontStyle: 'italic', margin: '3px 0 0' }}>
-          {result.whyLine}
-        </p>
+        <p style={{ fontSize: 11, color: '#a0855a', fontStyle: 'italic', margin: '3px 0 0' }}>{result.whyLine}</p>
       )}
       <p style={{ fontSize: 12, color: '#a0855a', marginTop: 3, marginBottom: 0 }}>
         {[result.neighbourhood, result.price != null ? `from $${result.price.toFixed(2)}` : null].filter(Boolean).join(' · ')}
       </p>
       <Chips profile={result.wcProfile} />
+      {result.bookAheadUrgent && (
+        <div style={{ background: '#FEF3C7', border: '1px solid #F59E0B', borderRadius: 8, padding: '8px 10px', marginTop: 8 }}>
+          <p style={{ fontSize: 11, color: '#92400E', fontWeight: 600, margin: 0 }}>
+            📅 This bar fills up fast — book ahead or call before you go
+          </p>
+        </div>
+      )}
       <p style={{ fontSize: 12, marginTop: 8, marginBottom: 0 }}>
-        {result.hhActiveAtKickoff ? (
-          <span style={{ color: '#166534' }}>🟢 HH active{result.hhEndDisplay ? ` until ${result.hhEndDisplay}` : ''}</span>
-        ) : (
-          <span style={{ color: '#991b1b' }}>🔴 HH ends before kickoff</span>
-        )}
+        {result.hhActiveAtKickoff
+          ? <span style={{ color: '#166534' }}>🟢 HH active{result.hhEndDisplay ? ` until ${result.hhEndDisplay}` : ''}</span>
+          : <span style={{ color: '#991b1b' }}>🔴 HH ends before kickoff</span>
+        }
       </p>
       <p style={{ fontSize: 11, color: '#a0855a', fontStyle: 'italic', marginTop: 4, marginBottom: 6 }}>
         💡 Match-day specials may apply — check with the bar
@@ -436,7 +449,6 @@ function PrimaryCard({ result, actions }: { result: WatchResult; actions: CardAc
 
 function AltCard({ result, actions }: { result: WatchResult; actions: CardActions }) {
   const handleClick = resolveAction(result, actions);
-
   return (
     <button
       type="button"
@@ -455,9 +467,7 @@ function AltCard({ result, actions }: { result: WatchResult; actions: CardAction
       <p style={{ fontSize: 11, margin: '2px 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
         {result.neighbourhood && <span style={{ color: '#a0855a' }}>{result.neighbourhood}</span>}
         {result.price != null && (
-          <span style={{ color: '#B34207', fontWeight: 500 }}>
-            {result.neighbourhood ? ' · ' : ''}${result.price.toFixed(2)}
-          </span>
+          <span style={{ color: '#B34207', fontWeight: 500 }}>{result.neighbourhood ? ' · ' : ''}${result.price.toFixed(2)}</span>
         )}
       </p>
       <Chips profile={result.wcProfile} />
@@ -469,32 +479,20 @@ function CommunityCard({ result }: { result: CommunityResult }) {
   return (
     <div style={{ background: 'white', border: '1px solid #fde8c4', borderRadius: 10, padding: 10 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-        <p style={{ fontSize: 13, fontWeight: 600, color: '#1c1917', margin: 0 }}>
-          {result.name}
-        </p>
+        <p style={{ fontSize: 13, fontWeight: 600, color: '#1c1917', margin: 0 }}>{result.name}</p>
         <span style={{ background: '#FAEEDA', color: '#854F0B', borderRadius: 999, padding: '3px 8px', fontSize: 10, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>
           {result.badge}
         </span>
       </div>
-      <p style={{ fontSize: 11, color: '#a0855a', margin: '3px 0 8px' }}>
-        {result.description}
-      </p>
+      <p style={{ fontSize: 11, color: '#a0855a', margin: '3px 0 8px' }}>{result.description}</p>
       <div style={{ display: 'flex', gap: 6 }}>
-        <a
-          href={result.mapsUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px 0', borderRadius: 8, background: '#B34207', color: 'white', fontSize: 11, fontWeight: 600, textDecoration: 'none' }}
-        >
+        <a href={result.mapsUrl} target="_blank" rel="noopener noreferrer"
+          style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px 0', borderRadius: 8, background: '#B34207', color: 'white', fontSize: 11, fontWeight: 600, textDecoration: 'none' }}>
           Get Directions →
         </a>
         {result.infoUrl && (
-          <a
-            href={result.infoUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px 0', borderRadius: 8, border: '1px solid #e8dcc8', background: 'white', color: '#1c1917', fontSize: 11, fontWeight: 600, textDecoration: 'none' }}
-          >
+          <a href={result.infoUrl} target="_blank" rel="noopener noreferrer"
+            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px 0', borderRadius: 8, border: '1px solid #e8dcc8', background: 'white', color: '#1c1917', fontSize: 11, fontWeight: 600, textDecoration: 'none' }}>
             More Info →
           </a>
         )}
@@ -539,7 +537,57 @@ function MatchStep({ matches, onSelect, onClose }: { matches: WcMatch[]; onSelec
   );
 }
 
-// ── Step 2: Vibe selector ──────────────────────────────────────────────────────
+// ── Step 2: Area selector ──────────────────────────────────────────────────────
+
+function AreaStep({ neighbourhoods, onSelect, onBack, onClose }: {
+  neighbourhoods: string[];
+  onSelect: (area: string | null) => void;
+  onBack: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <>
+      <div className="flex items-center gap-3 px-5 pt-2 pb-3 border-b border-[#e8dcc8] shrink-0">
+        <button onClick={onBack} className="w-8 h-8 flex items-center justify-center rounded-full text-stone-400 hover:text-[#1c1917] hover:bg-stone-100 transition-all text-sm shrink-0">←</button>
+        <p style={{ fontSize: 16, fontWeight: 700, color: '#1c1410', margin: 0, flex: 1 }}>Which area?</p>
+        <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full text-stone-400 hover:text-[#1c1917] hover:bg-stone-100 transition-all text-sm shrink-0">✕</button>
+      </div>
+      <div className="flex-1 overflow-y-auto px-4 py-3" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 16px)' }}>
+        {/* Anywhere — full width, skips area filter */}
+        <button
+          type="button"
+          onClick={() => onSelect(null)}
+          className="w-full text-left mb-3 hover:border-[#B34207]/40 transition-all"
+          style={{ background: '#faf5eb', border: '1px solid #e8dcc8', borderRadius: 10, padding: '12px 14px' }}
+        >
+          <p style={{ fontSize: 13, fontWeight: 700, color: '#1c1410', margin: 0 }}>🌍 Anywhere</p>
+          <p style={{ fontSize: 11, color: '#a0855a', margin: '3px 0 0' }}>Show all confirmed venues across Vancouver</p>
+        </button>
+
+        <div className="border-t border-[#e8dcc8] mb-3" />
+
+        {/* Neighbourhood grid */}
+        {neighbourhoods.length > 0 && (
+          <div className="grid grid-cols-2 gap-2">
+            {neighbourhoods.map(hood => (
+              <button
+                key={hood}
+                type="button"
+                onClick={() => onSelect(hood)}
+                className="text-left hover:border-[#B34207]/40 transition-all"
+                style={{ background: '#faf5eb', border: '1px solid #e8dcc8', borderRadius: 10, padding: '10px 12px' }}
+              >
+                <p style={{ fontSize: 12, fontWeight: 600, color: '#1c1410', margin: 0 }}>📍 {hood}</p>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+// ── Step 3: Vibe selector ──────────────────────────────────────────────────────
 
 const VIBES: { id: Vibe; title: string; subtitle: string }[] = [
   { id: 'cheap', title: '🍺 Cheap & lively',          subtitle: 'Best pint price near a screening' },
@@ -547,12 +595,17 @@ const VIBES: { id: Vibe; title: string; subtitle: string }[] = [
   { id: 'chill', title: '🧘 Chill, actually watch',    subtitle: 'Quieter spot, great screens' },
 ];
 
-function VibeStep({ onSelect, onBack }: { onSelect: (v: Vibe) => void; onBack: () => void }) {
+function VibeStep({ onSelect, onBack, selectedArea }: { onSelect: (v: Vibe) => void; onBack: () => void; selectedArea: string | null }) {
   return (
     <>
       <div className="flex items-center gap-3 px-5 pt-2 pb-3 border-b border-[#e8dcc8] shrink-0">
         <button onClick={onBack} className="w-8 h-8 flex items-center justify-center rounded-full text-stone-400 hover:text-[#1c1917] hover:bg-stone-100 transition-all text-sm shrink-0">←</button>
-        <p style={{ fontSize: 16, fontWeight: 700, color: '#1c1410', margin: 0 }}>What&apos;s your vibe?</p>
+        <div style={{ flex: 1 }}>
+          <p style={{ fontSize: 16, fontWeight: 700, color: '#1c1410', margin: 0 }}>What&apos;s your vibe?</p>
+          {selectedArea && (
+            <p style={{ fontSize: 11, color: '#a0855a', margin: '2px 0 0' }}>📍 {selectedArea}</p>
+          )}
+        </div>
       </div>
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 16px)' }}>
         {VIBES.map(v => (
@@ -572,7 +625,7 @@ function VibeStep({ onSelect, onBack }: { onSelect: (v: Vibe) => void; onBack: (
   );
 }
 
-// ── Step 3: Results ────────────────────────────────────────────────────────────
+// ── Step 4: Results ────────────────────────────────────────────────────────────
 
 function ResultsStep({ recs, onReset, actions }: { recs: Recs; onReset: () => void; actions: CardActions }) {
   return (
@@ -581,11 +634,14 @@ function ResultsStep({ recs, onReset, actions }: { recs: Recs; onReset: () => vo
         <p style={{ fontSize: 16, fontWeight: 700, color: '#1c1410', margin: 0 }}>Your spot 🍺</p>
       </div>
       <div className="flex-1 overflow-y-auto px-4 py-3" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 16px)' }}>
+        {recs.areaFallback && (
+          <p style={{ fontSize: 11, color: '#a0855a', marginBottom: 10 }}>ℹ️ {recs.areaFallback}</p>
+        )}
         {recs.noSupportersNote && (
           <p style={{ fontSize: 11, color: '#a0855a', fontStyle: 'italic', marginBottom: 12 }}>{recs.noSupportersNote}</p>
         )}
 
-        {/* Primary result */}
+        {/* Primary */}
         {recs.primary !== null
           ? <PrimaryCard result={recs.primary} actions={actions} />
           : recs.communityPrimary !== null
@@ -603,7 +659,27 @@ function ResultsStep({ recs, onReset, actions }: { recs: Recs; onReset: () => vo
           </>
         )}
 
-        {/* Community venues — "Also worth knowing" */}
+        {/* Book ahead picks */}
+        {recs.bookAheadPicks.length > 0 && (
+          <>
+            <p style={{ fontSize: 11, color: '#a0855a', marginTop: 16, marginBottom: 8 }}>📅 Book ahead picks</p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              {recs.bookAheadPicks.map((r, i) => <AltCard key={i} result={r} actions={actions} />)}
+            </div>
+          </>
+        )}
+
+        {/* Hidden gems */}
+        {recs.hiddenGems.length > 0 && (
+          <>
+            <p style={{ fontSize: 11, color: '#a0855a', marginTop: 16, marginBottom: 8 }}>💎 Hidden gems · usually has space</p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              {recs.hiddenGems.map((r, i) => <AltCard key={i} result={r} actions={actions} />)}
+            </div>
+          </>
+        )}
+
+        {/* Community venues — also worth knowing */}
         {recs.alsoWorthKnowing.length > 0 && (
           <>
             <p style={{ fontSize: 11, color: '#a0855a', marginTop: 16, marginBottom: 8 }}>Also worth knowing 👀</p>
@@ -634,12 +710,7 @@ function ResultsStep({ recs, onReset, actions }: { recs: Recs; onReset: () => vo
 // ── Main export ────────────────────────────────────────────────────────────────
 
 export default function WhereToWatchSheet({
-  todayMatches,
-  upcomingMatches,
-  screeningVenues,
-  supportersBars,
-  onClose,
-  onShowVenue,
+  todayMatches, upcomingMatches, screeningVenues, supportersBars, onClose, onShowVenue,
 }: {
   todayMatches: WcMatch[];
   upcomingMatches: WcMatch[];
@@ -650,6 +721,7 @@ export default function WhereToWatchSheet({
 }) {
   const [step, setStep] = useState<Step>(1);
   const [selectedMatch, setSelectedMatch] = useState<WcMatch | null>(null);
+  const [selectedArea, setSelectedArea] = useState<string | null>(null);
   const [recs, setRecs] = useState<Recs | null>(null);
   const [now] = useState(() => new Date());
 
@@ -658,19 +730,31 @@ export default function WhereToWatchSheet({
     return [...todayMatches, ...upcomingMatches.slice(0, 2)];
   }, [todayMatches, upcomingMatches]);
 
+  const neighbourhoods = useMemo(() => {
+    const set = new Set<string>();
+    screeningVenues.forEach(v => { if (v.neighbourhood) set.add(v.neighbourhood); });
+    return Array.from(set).sort();
+  }, [screeningVenues]);
+
   function handleMatchSelect(match: WcMatch) {
     setSelectedMatch(match);
     setStep(2);
   }
 
+  function handleAreaSelect(area: string | null) {
+    setSelectedArea(area);
+    setStep(3);
+  }
+
   function handleVibeSelect(vibe: Vibe) {
     if (!selectedMatch) return;
-    const computed = getRecommendations(vibe, selectedMatch, screeningVenues, supportersBars, now);
+    const computed = getRecommendations(vibe, selectedMatch, screeningVenues, supportersBars, now, selectedArea);
     setRecs(computed);
-    setStep(3);
+    setStep(4);
     posthog.capture('wc_where_to_watch_used', {
       match_id: selectedMatch.id,
       vibe,
+      area: selectedArea,
       result_bar_id: computed.primary?.id ?? null,
     });
   }
@@ -678,6 +762,7 @@ export default function WhereToWatchSheet({
   function handleReset() {
     setStep(1);
     setSelectedMatch(null);
+    setSelectedArea(null);
     setRecs(null);
   }
 
@@ -693,8 +778,9 @@ export default function WhereToWatchSheet({
         <div className="w-10 h-1 bg-stone-300 rounded-full mx-auto mt-3 mb-1 shrink-0" />
 
         {step === 1 && <MatchStep matches={matches} onSelect={handleMatchSelect} onClose={onClose} />}
-        {step === 2 && <VibeStep onSelect={handleVibeSelect} onBack={() => setStep(1)} />}
-        {step === 3 && recs && <ResultsStep recs={recs} onReset={handleReset} actions={{ screeningVenues, now, onShowVenue }} />}
+        {step === 2 && <AreaStep neighbourhoods={neighbourhoods} onSelect={handleAreaSelect} onBack={() => setStep(1)} onClose={onClose} />}
+        {step === 3 && <VibeStep onSelect={handleVibeSelect} onBack={() => setStep(2)} selectedArea={selectedArea} />}
+        {step === 4 && recs && <ResultsStep recs={recs} onReset={handleReset} actions={{ screeningVenues, now, onShowVenue }} />}
       </div>
     </>
   );
