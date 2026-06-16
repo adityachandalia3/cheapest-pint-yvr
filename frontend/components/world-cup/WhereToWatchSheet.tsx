@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import posthog from 'posthog-js';
 import type { WcMatch, SupportersBar, WcVenueBar, WcProfile } from '@/app/world-cup/page';
 import { cheapestPrice, isHHActive } from '@/app/world-cup/WcVenueList';
@@ -539,49 +539,100 @@ function MatchStep({ matches, onSelect, onClose }: { matches: WcMatch[]; onSelec
 
 // ── Step 2: Area selector ──────────────────────────────────────────────────────
 
+const NEIGHBOURHOOD_COORDS: Record<string, [number, number]> = {
+  'Downtown':          [49.2827, -123.1207],
+  'Gastown':           [49.2833, -123.1083],
+  'Yaletown':          [49.2757, -123.1218],
+  'Kitsilano':         [49.2636, -123.1682],
+  'Commercial Drive':  [49.2644, -123.0694],
+  'Mount Pleasant':    [49.2633, -123.1017],
+  'West End':          [49.2867, -123.1340],
+  'Coal Harbour':      [49.2901, -123.1257],
+  'South Granville':   [49.2533, -123.1440],
+  'Hastings-Sunrise':  [49.2797, -123.0567],
+  'Strathcona':        [49.2731, -123.0880],
+  'Chinatown':         [49.2791, -123.1017],
+  'Olympic Village':   [49.2693, -123.1178],
+  'Granville Island':  [49.2718, -123.1341],
+  'Davie Village':     [49.2780, -123.1340],
+};
+
+function nearestNeighbourhood(lat: number, lng: number, available: string[]): string | null {
+  let best: string | null = null;
+  let bestDist = Infinity;
+  for (const hood of available) {
+    const coords = NEIGHBOURHOOD_COORDS[hood];
+    if (!coords) continue;
+    const d = Math.hypot(lat - coords[0], lng - coords[1]);
+    if (d < bestDist) { bestDist = d; best = hood; }
+  }
+  return best;
+}
+
 function AreaStep({ neighbourhoods, onSelect, onBack, onClose }: {
   neighbourhoods: string[];
   onSelect: (area: string | null) => void;
   onBack: () => void;
   onClose: () => void;
 }) {
+  const [locating, setLocating] = useState(false);
+  const [locError, setLocError] = useState<string | null>(null);
+
+  const handleNearMe = useCallback(() => {
+    if (!navigator.geolocation) {
+      setLocError('Geolocation not supported — showing all venues');
+      onSelect(null);
+      return;
+    }
+    setLocating(true);
+    setLocError(null);
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        const hood = nearestNeighbourhood(pos.coords.latitude, pos.coords.longitude, neighbourhoods);
+        setLocating(false);
+        onSelect(hood);
+      },
+      () => {
+        setLocating(false);
+        setLocError("Couldn't get your location — showing all venues");
+        onSelect(null);
+      },
+      { timeout: 8000 },
+    );
+  }, [neighbourhoods, onSelect]);
+
   return (
     <>
       <div className="flex items-center gap-3 px-5 pt-2 pb-3 border-b border-[#e8dcc8] shrink-0">
         <button onClick={onBack} className="w-8 h-8 flex items-center justify-center rounded-full text-stone-400 hover:text-[#1c1917] hover:bg-stone-100 transition-all text-sm shrink-0">←</button>
-        <p style={{ fontSize: 16, fontWeight: 700, color: '#1c1410', margin: 0, flex: 1 }}>Which area?</p>
+        <p style={{ fontSize: 16, fontWeight: 700, color: '#1c1410', margin: 0, flex: 1 }}>Where are you?</p>
         <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full text-stone-400 hover:text-[#1c1917] hover:bg-stone-100 transition-all text-sm shrink-0">✕</button>
       </div>
-      <div className="flex-1 overflow-y-auto px-4 py-3" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 16px)' }}>
-        {/* Anywhere — full width, skips area filter */}
+      <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 16px)' }}>
+        {locError && (
+          <p style={{ fontSize: 11, color: '#a0855a', margin: 0 }}>ℹ️ {locError}</p>
+        )}
+        <button
+          type="button"
+          onClick={handleNearMe}
+          disabled={locating}
+          className="w-full text-left hover:border-[#B34207]/40 transition-all disabled:opacity-60"
+          style={{ background: '#faf5eb', border: '1px solid #e8dcc8', borderRadius: 10, padding: '14px 16px' }}
+        >
+          <p style={{ fontSize: 13, fontWeight: 700, color: '#1c1410', margin: 0 }}>
+            {locating ? '📍 Finding your location…' : '📍 Near me'}
+          </p>
+          <p style={{ fontSize: 11, color: '#a0855a', margin: '3px 0 0' }}>Show venues closest to you</p>
+        </button>
         <button
           type="button"
           onClick={() => onSelect(null)}
-          className="w-full text-left mb-3 hover:border-[#B34207]/40 transition-all"
-          style={{ background: '#faf5eb', border: '1px solid #e8dcc8', borderRadius: 10, padding: '12px 14px' }}
+          className="w-full text-left hover:border-[#B34207]/40 transition-all"
+          style={{ background: '#faf5eb', border: '1px solid #e8dcc8', borderRadius: 10, padding: '14px 16px' }}
         >
           <p style={{ fontSize: 13, fontWeight: 700, color: '#1c1410', margin: 0 }}>🌍 Anywhere</p>
           <p style={{ fontSize: 11, color: '#a0855a', margin: '3px 0 0' }}>Show all confirmed venues across Vancouver</p>
         </button>
-
-        <div className="border-t border-[#e8dcc8] mb-3" />
-
-        {/* Neighbourhood grid */}
-        {neighbourhoods.length > 0 && (
-          <div className="grid grid-cols-2 gap-2">
-            {neighbourhoods.map(hood => (
-              <button
-                key={hood}
-                type="button"
-                onClick={() => onSelect(hood)}
-                className="text-left hover:border-[#B34207]/40 transition-all"
-                style={{ background: '#faf5eb', border: '1px solid #e8dcc8', borderRadius: 10, padding: '10px 12px' }}
-              >
-                <p style={{ fontSize: 12, fontWeight: 600, color: '#1c1410', margin: 0 }}>📍 {hood}</p>
-              </button>
-            ))}
-          </div>
-        )}
       </div>
     </>
   );
