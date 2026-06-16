@@ -653,7 +653,7 @@ function ResultsStep({ recs, onReset, actions }: { recs: Recs; onReset: () => vo
         {recs.alternatives.length > 0 && (
           <>
             <p style={{ fontSize: 11, color: '#a0855a', marginTop: 16, marginBottom: 8 }}>Or try these →</p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {recs.alternatives.map((alt, i) => <AltCard key={i} result={alt} actions={actions} />)}
             </div>
           </>
@@ -663,7 +663,7 @@ function ResultsStep({ recs, onReset, actions }: { recs: Recs; onReset: () => vo
         {recs.bookAheadPicks.length > 0 && (
           <>
             <p style={{ fontSize: 11, color: '#a0855a', marginTop: 16, marginBottom: 8 }}>📅 Book ahead picks</p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {recs.bookAheadPicks.map((r, i) => <AltCard key={i} result={r} actions={actions} />)}
             </div>
           </>
@@ -673,7 +673,7 @@ function ResultsStep({ recs, onReset, actions }: { recs: Recs; onReset: () => vo
         {recs.hiddenGems.length > 0 && (
           <>
             <p style={{ fontSize: 11, color: '#a0855a', marginTop: 16, marginBottom: 8 }}>💎 Hidden gems · usually has space</p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {recs.hiddenGems.map((r, i) => <AltCard key={i} result={r} actions={actions} />)}
             </div>
           </>
